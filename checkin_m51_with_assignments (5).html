@@ -1,0 +1,2382 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ระบบเช็คชื่อเวร M5/1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Mitr:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- ============================================================
+  CSS VARIABLES & BASE STYLES
+  กำหนดสีและฟอนต์หลักของระบบทั้งหมด
+============================================================ -->
+<style>
+:root{
+  --c1:#FAF7F3;      /* พื้นหลังหลัก */
+  --c2:#F0E4D3;      /* พื้นหลังการ์ด อ่อน */
+  --c3:#DCC5B2;      /* ขอบ / เส้นแบ่ง */
+  --c4:#D9A299;      /* สีหลัก accent */
+  --text:#5c4d45;    /* สีข้อความหลัก */
+  --green:#89b89a;   /* สีทำเวร */
+  --red:#e58d8d;     /* สีลา */
+  --yellow:#e5c08d;  /* สีมาสาย */
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Mitr',sans-serif;}
+body{background:var(--c1);color:var(--text);}
+
+/* ============================================================
+  LAYOUT: CONTAINER หลักของทุกหน้า
+============================================================ */
+.container{max-width:1100px;margin:auto;padding:20px;padding-bottom:130px;}
+
+/* ============================================================
+  HEADER BAR: แถบบนสุดแสดงชื่อระบบ + ปุ่มออกจากระบบ/ตั้งค่า
+============================================================ */
+.header{
+  background:linear-gradient(135deg,var(--c3),var(--c4));
+  padding:16px 20px;border-radius:24px;
+  display:flex;justify-content:space-between;align-items:center;
+  flex-wrap:wrap;gap:10px;margin-bottom:18px;color:white;
+}
+.logo h1{font-size:1.6rem;line-height:1.2;}
+.top-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.top-actions button{border:none;padding:10px 14px;border-radius:14px;cursor:pointer;font-size:.88rem;font-weight:600;white-space:nowrap;}
+.setting-btn{background:#b89c82;color:white;}
+.logout-btn{background:#de7f7f;color:white;}
+
+/* ============================================================
+  CARD: กล่องเนื้อหาทั่วไป
+============================================================ */
+.card{background:white;border-radius:24px;padding:20px;margin-bottom:16px;box-shadow:0 4px 16px rgba(0,0,0,.05);}
+
+/* ============================================================
+  LOGIN PAGE: หน้าเข้าสู่ระบบ
+============================================================ */
+.login-card{max-width:420px;margin:40px auto;padding:30px;border-radius:34px;}
+input[type=text],input[type=password],input[type=date],select{
+  width:100%;border:none;background:var(--c1);
+  padding:13px;border-radius:14px;outline:none;
+  margin-bottom:12px;font-size:1rem;font-family:'Mitr',sans-serif;
+}
+
+/* ============================================================
+  BUTTONS: ปุ่มต่างๆ ทั่วระบบ
+============================================================ */
+button{border:none;border-radius:14px;padding:13px;cursor:pointer;font-size:1rem;transition:.2s;font-family:'Mitr',sans-serif;}
+button:hover{transform:translateY(-2px);}
+.btn-main{background:var(--c4);color:white;}
+.btn-soft{background:var(--c2);color:var(--text);}
+.btn-danger{background:var(--red);color:white;}
+.btn-green{background:var(--green);color:white;}
+.btn-yellow{background:var(--yellow);color:white;}
+
+/* ============================================================
+  BANNER SLIDER: สไลด์รูปหน้า Home
+============================================================ */
+.banner-slider{width:100%;height:340px;border-radius:30px;overflow:hidden;position:relative;margin-bottom:24px;}
+.slides{width:100%;height:100%;position:relative;}
+.slide{position:absolute;width:100%;height:100%;opacity:0;transition:1s;}
+.slide.active{opacity:1;}
+.slide img{width:100%;height:100%;object-fit:cover;transition:transform 8s ease;}
+.slide.active img{transform:scale(1.05);}
+.dots{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:5;}
+.dot{width:11px;height:11px;border-radius:50%;background:rgba(255,255,255,.5);cursor:pointer;}
+.dot.active{background:white;}
+
+/* ============================================================
+  DASHBOARD: การ์ดสรุปสถิติ
+============================================================ */
+.dashboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;}
+.dash-card{background:var(--c1);padding:16px;border-radius:18px;text-align:center;}
+.dash-card h1{margin-top:6px;color:var(--c4);font-size:2rem;}
+.percent-badge{display:inline-block;background:#f0e4d3;color:#b87a6a;border-radius:8px;padding:2px 8px;font-size:.8rem;margin-top:4px;font-weight:600;}
+
+/* ============================================================
+  BOTTOM NAV: แถบเมนูด้านล่าง (Fixed)
+  แสดงเมนูต่างกันตาม role: ครู vs นักเรียน
+============================================================ */
+.bottom-nav{
+  position:fixed;bottom:14px;left:50%;transform:translateX(-50%);
+  background:white;padding:10px;border-radius:26px;
+  display:flex;gap:6px;box-shadow:0 8px 25px rgba(0,0,0,.08);z-index:999;
+  max-width:calc(100vw - 20px);width:auto;
+}
+.bottom-nav button{background:var(--c4);color:white;padding:11px 8px;font-size:.82rem;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* ============================================================
+  MODAL: หน้าต่างลอย (ตั้งค่า, แก้ไขย้อนหลัง, รายละเอียด)
+============================================================ */
+.modal-wrap{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.38);display:none;justify-content:center;align-items:center;z-index:99999;padding:10px;}
+.modal-box{background:white;width:100%;max-width:500px;padding:24px;border-radius:28px;max-height:90vh;overflow-y:auto;}
+.setting-title{font-size:1rem;font-weight:600;margin-bottom:10px;color:var(--c4);padding-bottom:6px;border-bottom:2px solid var(--c2);}
+.upload-box{background:var(--c1);padding:12px;border-radius:16px;margin-bottom:10px;}
+
+/* ============================================================
+  UTILITY
+============================================================ */
+.hidden{display:none!important;}
+
+/* ============================================================
+  LOADING OVERLAY: หน้าจอโหลดขณะส่งข้อมูล
+============================================================ */
+.loading-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,.82);display:flex;justify-content:center;align-items:center;z-index:999999;}
+.loading-box{background:white;padding:28px 36px;border-radius:26px;text-align:center;}
+.loader{width:50px;height:50px;border:5px solid #eee;border-top:5px solid var(--c4);border-radius:50%;margin:auto;margin-bottom:12px;animation:spin 1s linear infinite;}
+@keyframes spin{100%{transform:rotate(360deg);}}
+
+/* ============================================================
+  HISTORY TABLE: ตารางย้อนหลัง
+  ปรับให้อ่านง่ายขึ้นบนมือถือ — ใช้ card layout แทน table บนจอเล็ก
+============================================================ */
+.table-wrapper{overflow-x:auto;border-radius:16px;-webkit-overflow-scrolling:touch;}
+table{width:100%;border-collapse:collapse;min-width:420px;}
+thead{background:var(--c2);}
+th,td{padding:11px 8px;text-align:center;border-bottom:1px solid #eee;font-size:.88rem;white-space:nowrap;}
+td.td-name{white-space:normal;text-align:left;min-width:120px;}
+
+/* History Card Layout: แสดงเป็น card บนมือถือ แทนตาราง */
+.history-cards{display:none;flex-direction:column;gap:10px;}
+.history-card{background:var(--c1);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;position:relative;}
+.history-card .hc-date{font-size:.72rem;color:#bbb;font-weight:600;}
+.history-card .hc-no{min-width:28px;font-size:.78rem;color:var(--c4);font-weight:700;text-align:center;}
+.history-card .hc-name{flex:1;font-size:.88rem;font-weight:600;line-height:1.35;}
+.history-card .hc-edit{position:absolute;top:10px;right:12px;}
+
+/* BADGE: ป้ายแสดงประเภทการทำเวร */
+.retro-badge{display:inline-block;border-radius:8px;padding:3px 9px;font-size:.78rem;font-weight:600;}
+.badge-work{background:#e8f5ec;color:#4a9b65;}
+.badge-leave{background:#fff0f0;color:#c75b5b;}
+.badge-late{background:#fff8e8;color:#b87a30;}
+
+/* ============================================================
+  FLOW STEPPER: แสดงขั้นตอนการเช็คชื่อ (ครู)
+============================================================ */
+.flow-stepper{display:flex;align-items:flex-start;margin-bottom:22px;}
+.flow-step{display:flex;flex-direction:column;align-items:center;flex:1;min-width:0;}
+.step-circle{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.95rem;font-weight:600;border:2px solid var(--c3);background:white;color:var(--c3);transition:.3s;flex-shrink:0;}
+.step-circle.active{background:var(--c4);border-color:var(--c4);color:white;}
+.step-circle.done{background:var(--green);border-color:var(--green);color:white;}
+.step-label{font-size:.7rem;margin-top:4px;color:#bbb;text-align:center;line-height:1.3;}
+.step-label.active{color:var(--c4);font-weight:600;}
+.step-label.done{color:var(--green);}
+.step-line{flex:1;height:2px;background:var(--c2);margin-top:17px;}
+.step-line.done{background:var(--green);}
+
+/* ============================================================
+  STUDENT GRID: กริดเลือกนักเรียน (Step 1 ของ flow ครู)
+============================================================ */
+.student-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin:10px 0 16px;}
+.student-card{background:var(--c1);border-radius:14px;padding:12px 8px;text-align:center;cursor:pointer;border:2px solid transparent;transition:.15s;user-select:none;min-height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.student-card:hover{border-color:var(--c3);}
+.student-card.selected{border-color:var(--green);background:#f0f9f3;}
+.student-card .snum{font-size:.72rem;color:#bbb;}
+.student-card .sname{font-size:.82rem;font-weight:600;margin-top:3px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;}
+.student-card .stick{color:var(--green);font-size:.72rem;margin-top:4px;font-weight:600;}
+.sel-count{font-size:.85rem;color:var(--green);font-weight:600;margin-bottom:8px;}
+
+/* ============================================================
+  TYPE GRID: เลือกประเภท ทำเวร/ลา/มาสาย (Step 2 ของ flow ครู)
+============================================================ */
+.type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0 16px;}
+.type-card{background:var(--c1);border-radius:18px;padding:20px 8px;text-align:center;cursor:pointer;border:2px solid transparent;transition:.15s;position:relative;}
+.type-card:hover{border-color:var(--c3);}
+.type-card.sel-work,.type-card.sel-leave,.type-card.sel-late{border-color:var(--green)!important;background:#f0f9f3!important;}
+.type-card .type-tick{display:none;position:absolute;top:8px;right:10px;font-size:1rem;color:var(--green);font-weight:700;}
+.type-card.sel-work .type-tick,.type-card.sel-leave .type-tick,.type-card.sel-late .type-tick{display:block;}
+.type-card .ti{font-size:1.8rem;}
+.type-card .tn{font-size:.92rem;font-weight:600;margin-top:6px;}
+
+/* ============================================================
+  CONFIRM BOX: สรุปก่อนบันทึก (Step 3 ของ flow ครู)
+============================================================ */
+.confirm-box{background:var(--c1);border-radius:16px;padding:16px;margin-bottom:14px;}
+.confirm-row{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid #eee;font-size:.9rem;gap:8px;}
+.confirm-row:last-child{border-bottom:none;}
+.confirm-list{background:white;border-radius:10px;padding:8px;margin-top:6px;width:100%;}
+.confirm-list-item{font-size:.88rem;padding:6px 4px;border-bottom:1px solid #f5f5f5;display:flex;align-items:center;gap:8px;}
+.confirm-list-item:last-child{border-bottom:none;}
+.confirm-list-item .cno{min-width:28px;font-size:.78rem;color:#bbb;font-weight:600;flex-shrink:0;}
+.confirm-list-item .cname{flex:1;word-break:break-word;}
+
+/* FLOW NAVIGATION BUTTONS */
+.flow-nav{display:flex;gap:10px;margin-top:10px;}
+.flow-nav button{flex:1;}
+
+/* ============================================================
+  LOCKED MESSAGE: แสดงเมื่อนักเรียนพยายามเข้าหน้าเช็คชื่อ
+============================================================ */
+.locked-msg{text-align:center;padding:40px 0;color:#bbb;font-size:1.05rem;line-height:1.8;}
+
+/* ============================================================
+  STUDENT VIEW: หน้าดูย้อนหลังสำหรับนักเรียน (อ่านอย่างเดียว)
+  แสดงเป็น card ใหญ่อ่านง่ายบนมือถือ
+============================================================ */
+.student-history-card{
+  background:white;border-radius:18px;padding:16px;
+  display:flex;align-items:center;gap:14px;
+  margin-bottom:10px;box-shadow:0 2px 10px rgba(0,0,0,.04);
+}
+.shc-left{display:flex;flex-direction:column;align-items:center;min-width:42px;}
+.shc-no{font-size:1.1rem;font-weight:700;color:var(--c4);}
+.shc-label{font-size:.65rem;color:#bbb;}
+.shc-mid{flex:1;}
+.shc-name{font-size:.9rem;font-weight:600;line-height:1.4;}
+.shc-date{font-size:.72rem;color:#bbb;margin-top:2px;}
+
+/* ============================================================
+  FILTER BAR: แถบกรองวันที่ในหน้าย้อนหลัง
+============================================================ */
+.filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
+.filter-bar input[type=date]{flex:1;min-width:130px;margin-bottom:0;}
+
+/* ============================================================
+  STORAGE STATUS BAR: แถบแสดงสถานะพื้นที่จัดเก็บ
+============================================================ */
+.storage-bar-wrap{background:var(--c1);border-radius:12px;padding:10px 14px;margin-bottom:12px;}
+.storage-bar-label{font-size:.78rem;color:#bbb;margin-bottom:6px;}
+.storage-bar-track{height:8px;background:#eee;border-radius:99px;overflow:hidden;}
+.storage-bar-fill{height:100%;background:var(--green);border-radius:99px;transition:.5s;}
+.storage-bar-fill.warn{background:var(--yellow);}
+.storage-bar-fill.danger{background:var(--red);}
+
+/* ============================================================
+  EDIT RECORD MODAL: หน้าต่างแก้ไขรายการย้อนหลัง (ปุ่มใหญ่ มือถือง่าย)
+============================================================ */
+.edit-modal-name{font-weight:600;font-size:1rem;margin-bottom:6px;line-height:1.5;}
+.edit-modal-meta{font-size:.8rem;color:#bbb;margin-bottom:18px;}
+.edit-type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+.edit-type-btn{padding:16px 8px;border-radius:16px;font-size:.88rem;font-weight:600;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;transition:.15s;}
+.edit-type-btn:hover{transform:translateY(-2px);}
+.edit-type-btn .eti{font-size:1.6rem;}
+
+/* ============================================================
+  RESPONSIVE: ปรับ layout สำหรับมือถือ
+============================================================ */
+@media(max-width:600px){
+  /* ซ่อน table ปกติ แสดง card แทนบนมือถือ */
+  .table-wrapper{display:none;}
+  .history-cards{display:flex;}
+
+  .container{padding:10px;padding-bottom:130px;}
+  .logo h1{font-size:1.1rem;}
+  .top-actions button{padding:8px 10px;font-size:.76rem;}
+  .banner-slider{height:170px;border-radius:16px;}
+  .bottom-nav{padding:8px 6px;gap:4px;border-radius:18px;}
+  .bottom-nav button{padding:10px 4px;font-size:.7rem;}
+  .student-grid{grid-template-columns:repeat(2,1fr);gap:6px;}
+  .student-card{padding:10px 6px;min-height:68px;}
+  .student-card .sname{font-size:.76rem;}
+  .type-card{padding:14px 4px;}
+  .type-card .ti{font-size:1.3rem;}
+  .type-card .tn{font-size:.8rem;}
+  th,td{padding:8px 5px;font-size:.76rem;}
+  td.td-name{min-width:90px;}
+  .flow-nav button{font-size:.82rem;padding:11px 6px;}
+  .step-label{font-size:.6rem;}
+  .step-circle{width:30px;height:30px;font-size:.85rem;}
+  .step-line{margin-top:15px;}
+  .modal-box{padding:16px;border-radius:22px;}
+  .confirm-row{flex-direction:column;}
+  .confirm-box{padding:12px;}
+  .dash-card h1{font-size:1.6rem;}
+}
+
+@media(min-width:601px){
+  /* ซ่อน card layout บน desktop แสดง table ปกติ */
+  .history-cards{display:none!important;}
+  .table-wrapper{display:block;}
+}
+
+/* ============================================================
+  ASSIGNMENT SYSTEM: ระบบงานที่ต้องส่ง
+============================================================ */
+.subject-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
+.subject-tab{padding:8px 14px;border-radius:12px;border:2px solid var(--c3);background:white;
+  color:var(--text);cursor:pointer;font-size:.82rem;font-weight:600;transition:.15s;}
+.subject-tab.active{background:var(--c4);border-color:var(--c4);color:white;}
+.subject-tab:hover:not(.active){background:var(--c2);}
+
+.assign-card{background:white;border-radius:18px;padding:14px 16px;margin-bottom:10px;
+  box-shadow:0 2px 10px rgba(0,0,0,.05);display:flex;align-items:flex-start;gap:12px;
+  border-left:4px solid var(--c3);transition:.2s;}
+.assign-card.done{opacity:.55;border-left-color:var(--green);}
+.assign-card.overdue{border-left-color:var(--red);}
+.assign-card.due-soon{border-left-color:var(--yellow);}
+.assign-check{width:24px;height:24px;border-radius:8px;border:2px solid var(--c3);
+  flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  margin-top:2px;transition:.15s;}
+.assign-check.checked{background:var(--green);border-color:var(--green);color:white;}
+.assign-body{flex:1;min-width:0;}
+.assign-title{font-size:.9rem;font-weight:600;line-height:1.4;margin-bottom:3px;}
+.assign-card.done .assign-title{text-decoration:line-through;color:#bbb;}
+.assign-meta{font-size:.75rem;color:#bbb;display:flex;gap:10px;flex-wrap:wrap;}
+.assign-badge{display:inline-block;padding:2px 8px;border-radius:8px;font-size:.72rem;font-weight:600;}
+.assign-badge.due-today{background:#fff8e8;color:#b87a30;}
+.assign-badge.overdue{background:#fff0f0;color:#c75b5b;}
+.assign-badge.ok{background:#e8f5ec;color:#4a9b65;}
+.assign-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0;}
+.assign-edit-btn{padding:5px 9px;border-radius:9px;font-size:.75rem;background:var(--c1);color:var(--text);border:none;cursor:pointer;}
+.assign-del-btn{padding:5px 9px;border-radius:9px;font-size:.75rem;background:#fff0f0;color:#c75b5b;border:none;cursor:pointer;}
+.add-assign-btn{width:100%;padding:14px;border-radius:16px;background:var(--c2);color:var(--text);
+  font-size:.92rem;font-weight:600;border:2px dashed var(--c3);cursor:pointer;margin-top:6px;}
+.add-assign-btn:hover{background:var(--c3);}
+
+.assign-modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.38);
+  display:none;justify-content:center;align-items:center;z-index:99999;padding:10px;}
+.assign-modal-box{background:white;width:100%;max-width:460px;padding:22px;border-radius:26px;
+  max-height:90vh;overflow-y:auto;}
+.assign-form-label{font-size:.82rem;color:#999;font-weight:600;margin-bottom:4px;display:block;}
+.assign-form-group{margin-bottom:14px;}
+.assign-form-group input,.assign-form-group select,.assign-form-group textarea{
+  width:100%;border:none;background:var(--c1);padding:12px;border-radius:12px;
+  outline:none;font-size:.92rem;font-family:'Mitr',sans-serif;}
+.assign-form-group textarea{resize:none;height:72px;}
+.assign-color-picker{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;}
+.assign-color-swatch{width:28px;height:28px;border-radius:8px;cursor:pointer;
+  border:3px solid transparent;transition:.15s;}
+.assign-color-swatch.selected{border-color:var(--text);transform:scale(1.15);}
+
+.assign-empty{text-align:center;padding:28px 0;color:#ccc;font-size:.92rem;line-height:2;}
+.assign-summary{display:flex;gap:10px;margin-bottom:14px;}
+.assign-sum-card{flex:1;background:var(--c1);border-radius:14px;padding:12px 8px;text-align:center;}
+.assign-sum-card h2{font-size:1.4rem;color:var(--c4);margin-top:4px;}
+.assign-sum-card p{font-size:.72rem;color:#bbb;}
+
+/* Setting: assign section */
+.assign-setting-item{background:var(--c1);border-radius:14px;padding:12px 14px;margin-bottom:8px;
+  display:flex;align-items:center;gap:10px;}
+.assign-setting-item .asi-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+.assign-setting-item .asi-info{flex:1;}
+.assign-setting-item .asi-name{font-size:.88rem;font-weight:600;}
+.assign-setting-item .asi-teacher{font-size:.74rem;color:#bbb;}
+.assign-setting-edit{padding:6px 12px;border-radius:10px;font-size:.78rem;background:var(--c2);color:var(--text);border:none;cursor:pointer;}
+
+.subj-modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.38);
+  display:none;justify-content:center;align-items:center;z-index:99999;padding:10px;}
+.subj-modal-box{background:white;width:100%;max-width:420px;padding:22px;border-radius:26px;
+  max-height:85vh;overflow-y:auto;}
+
+/* ============================================================
+  CALENDAR STYLES
+============================================================ */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+.cal-dow{text-align:center;font-size:.68rem;color:#bbb;font-weight:600;padding:4px 0;}
+.cal-cell{min-height:48px;border-radius:10px;padding:4px;cursor:pointer;transition:.15s;
+  display:flex;flex-direction:column;align-items:center;position:relative;}
+.cal-cell:hover{background:var(--c2);}
+.cal-cell.today{background:var(--c2);border:2px solid var(--c4);}
+.cal-cell.selected{background:var(--c4)!important;}
+.cal-cell.other-month .cal-day{color:#ccc;}
+.cal-day{font-size:.82rem;font-weight:600;margin-bottom:2px;line-height:1;}
+.cal-cell.today .cal-day{color:var(--c4);}
+.cal-cell.selected .cal-day{color:white;}
+.cal-dots{display:flex;gap:2px;flex-wrap:wrap;justify-content:center;max-width:32px;}
+.cal-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.cal-day-detail-card{background:var(--c1);border-radius:14px;padding:12px 14px;margin-bottom:8px;
+  border-left:4px solid var(--c3);}
+.cal-day-detail-card.overdue{border-left-color:var(--red);}
+.cal-day-detail-card.done{border-left-color:var(--green);opacity:.6;}
+.subj-link-row{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;}
+.subj-link-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;
+  border-radius:10px;font-size:.75rem;font-weight:600;text-decoration:none;
+  background:var(--c1);color:var(--text);border:1px solid var(--c3);transition:.15s;}
+.subj-link-btn:hover{background:var(--c2);}
+
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- ============================================================
+    HEADER: แถบบนสุด — ชื่อระบบ + ปุ่ม logout/ตั้งค่า
+    topActions = ปุ่มสำหรับครู, studentActions = ปุ่มสำหรับนักเรียน
+  ============================================================ -->
+  <div class="header">
+    <div class="logo"><h1>ระบบเช็คชื่อเวร M5/1</h1></div>
+    <div class="top-actions hidden" id="topActions">
+      <button class="setting-btn" onclick="openSetting()">⚙️ ตั้งค่า</button>
+      <button class="logout-btn" onclick="logout()">🚪 ออกจากระบบ</button>
+    </div>
+    <div class="top-actions hidden" id="studentActions">
+      <button class="logout-btn" onclick="logout()">🚪 ออกจากระบบ</button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+    LOGIN PAGE: หน้าเข้าสู่ระบบ
+    - ครู: กรอก username + password → loginTeacher()
+    - นักเรียน: กด "เข้าชมแบบนักเรียน" → loginStudent() (ไม่ต้องรหัส)
+  ============================================================ -->
+  <div class="card login-card" id="loginPage">
+    <h2 style="margin-bottom:18px;font-size:1.8rem;">🔐 เข้าสู่ระบบ</h2>
+    <input type="text"     id="username" placeholder="ชื่อผู้ใช้ (ครู)">
+    <input type="password" id="password" placeholder="รหัสผ่าน (ครู)" onkeydown="if(event.key==='Enter')loginTeacher()">
+    <button class="btn-main" style="width:100%;margin-bottom:10px;" onclick="loginTeacher()">👩‍🏫 เข้าสู่ระบบครู</button>
+    <button class="btn-soft" style="width:100%;" onclick="loginStudent()">👨‍🎓 เข้าชมแบบนักเรียน</button>
+    <p style="font-size:.75rem;color:#bbb;margin-top:12px;text-align:center;">นักเรียนสามารถดูย้อนหลังได้โดยไม่ต้องมีรหัสผ่าน</p>
+  </div>
+
+  <!-- ============================================================
+    HOME PAGE: หน้าแรกหลังล็อกอิน — แสดง banner สไลด์
+  ============================================================ -->
+  <div id="homePage" class="hidden">
+    <div class="banner-slider">
+      <div class="slides" id="slides"></div>
+      <div class="dots"   id="dots"></div>
+    </div>
+    <div class="card" style="text-align:center;padding:18px;">
+      <p style="color:#bbb;font-size:.9rem;">ยินดีต้อนรับ 👋 เลือกเมนูด้านล่าง</p>
+    </div>
+  </div>
+
+  <!-- ============================================================
+    CHECK PAGE: หน้าเช็คชื่อ (เฉพาะครู)
+    ประกอบด้วย 3 Step:
+      Step 1 = เลือกนักเรียน
+      Step 2 = เลือกประเภท (ทำเวร/ลา/มาสาย)
+      Step 3 = ยืนยัน + บันทึก
+  ============================================================ -->
+  <div id="checkPage" class="hidden">
+    <div class="card">
+      <!-- Stepper แสดงขั้นตอน -->
+      <div class="flow-stepper">
+        <div class="flow-step">
+          <div class="step-circle active" id="sc1">1</div>
+          <div class="step-label active"  id="sl1">เลือกนักเรียน</div>
+        </div>
+        <div class="step-line" id="line1"></div>
+        <div class="flow-step">
+          <div class="step-circle" id="sc2">2</div>
+          <div class="step-label"  id="sl2">เลือกประเภท</div>
+        </div>
+        <div class="step-line" id="line2"></div>
+        <div class="flow-step">
+          <div class="step-circle" id="sc3">3</div>
+          <div class="step-label"  id="sl3">บันทึก</div>
+        </div>
+      </div>
+
+      <!-- ข้อความล็อค: แสดงเมื่อนักเรียนพยายามเข้าหน้านี้ -->
+      <div id="flowLockedMsg" class="locked-msg hidden">
+        🔒 เฉพาะครูเท่านั้น<br>
+        <span style="font-size:.85rem;">กรุณาเข้าสู่ระบบด้วยบัญชีครู</span>
+      </div>
+
+      <!-- STEP 1: เลือกนักเรียน -->
+      <div id="flowStep1">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
+          <span style="font-weight:600;">เลือกนักเรียน</span>
+          <button class="btn-soft" style="padding:6px 12px;font-size:.8rem;" onclick="toggleSelectAll()">เลือก/ยกเลิกทั้งหมด</button>
+        </div>
+        <input type="text" id="flowSearch" placeholder="🔍 ค้นหาชื่อ/เลขที่..." onkeyup="renderFlowStudents()" style="margin-bottom:6px;">
+        <div class="sel-count" id="selCount">เลือกแล้ว 0 คน</div>
+        <div class="student-grid" id="flowStudentGrid"></div>
+        <div class="flow-nav">
+          <button class="btn-main" id="flowBtn1" onclick="flowNext(2)" disabled style="opacity:.5;">ถัดไป →</button>
+        </div>
+      </div>
+
+      <!-- STEP 2: เลือกประเภท -->
+      <div id="flowStep2" class="hidden">
+        <div style="font-weight:600;margin-bottom:4px;">เลือกประเภท</div>
+        <div style="font-size:.85rem;color:#bbb;margin-bottom:12px;" id="step2sub"></div>
+        <div class="type-grid">
+          <div class="type-card" id="tc-work" onclick="selectType('ทำเวร',this)">
+            <span class="type-tick">✓</span>
+            <div class="ti">🧹</div><div class="tn">ทำเวร</div>
+          </div>
+          <div class="type-card" id="tc-leave" onclick="selectType('ลา',this)">
+            <span class="type-tick">✓</span>
+            <div class="ti">📋</div><div class="tn">ลา</div>
+          </div>
+          <div class="type-card" id="tc-late" onclick="selectType('มาสาย',this)">
+            <span class="type-tick">✓</span>
+            <div class="ti">⏰</div><div class="tn">มาสาย</div>
+          </div>
+        </div>
+        <div class="flow-nav">
+          <button class="btn-soft" onclick="flowNext(1)">← ย้อนกลับ</button>
+          <button class="btn-main" id="flowBtn2" onclick="flowNext(3)" disabled style="opacity:.5;">ถัดไป →</button>
+        </div>
+      </div>
+
+      <!-- STEP 3: ยืนยันและบันทึก -->
+      <div id="flowStep3" class="hidden">
+        <div style="font-weight:600;margin-bottom:12px;">ยืนยันการบันทึก</div>
+        <div class="confirm-box">
+          <div class="confirm-row">
+            <span style="color:#bbb;flex-shrink:0;">วันที่</span>
+            <span id="cfDate"></span>
+          </div>
+          <div class="confirm-row">
+            <span style="color:#bbb;flex-shrink:0;">ประเภท</span>
+            <span id="cfType" style="font-weight:600;color:var(--c4);"></span>
+          </div>
+          <div class="confirm-row" style="flex-direction:column;align-items:flex-start;">
+            <span style="color:#bbb;margin-bottom:4px;">
+              นักเรียนที่เลือก (<span id="cfCount">0</span> คน)
+            </span>
+            <div class="confirm-list" id="cfList"></div>
+          </div>
+        </div>
+        <div class="flow-nav">
+          <button class="btn-soft" onclick="flowNext(2)">← ย้อนกลับ</button>
+          <button class="btn-main" onclick="submitFlow()">💾 บันทึกลง Google Sheet</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================
+    DASHBOARD PAGE: หน้าสรุปสถิติ
+    แสดง: จำนวนนักเรียนทั้งหมด / มาแล้ว / ทำเวร / ขาด
+    และกราฟรายเดือน
+  ============================================================ -->
+  <div id="dashboardPage" class="hidden">
+    <div class="card">
+      <div class="dashboard">
+        <div class="dash-card">ทั้งหมด<h1 id="allCount">19</h1></div>
+        <div class="dash-card">มาเรียน<h1 id="checkedCount">0</h1><div class="percent-badge" id="checkedPct">0%</div></div>
+        <div class="dash-card">ทำเวร<h1 id="doneCount">0</h1><div class="percent-badge" id="donePct">0%</div></div>
+        <div class="dash-card">ขาด<h1 id="absentCount">0</h1><div class="percent-badge" id="absentPct">0%</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2 style="margin-bottom:12px;">📈 สรุปรายเดือน</h2>
+      <canvas id="monthlyChart"></canvas>
+    </div>
+  </div>
+
+  <!-- ============================================================
+    HISTORY PAGE: หน้าย้อนหลัง — ทั้งครูและนักเรียนเข้าได้
+    - ครู: มีปุ่ม ✏️ แก้ไขทุกรายการ
+    - นักเรียน: อ่านอย่างเดียว
+    - มือถือ: แสดงเป็น card | Desktop: แสดงเป็น table
+  ============================================================ -->
+  <div id="historyPage" class="hidden">
+    <div class="card">
+      <div style="font-size:1.05rem;font-weight:600;margin-bottom:12px;" id="todayDate"></div>
+
+      <!-- แถบกรองวันที่ -->
+      <div class="filter-bar">
+        <input type="date" id="historyDate" onchange="filterHistoryDate()">
+        <button class="btn-soft" onclick="clearHistoryFilter()" style="padding:10px 14px;font-size:.85rem;white-space:nowrap;">แสดงทั้งหมด</button>
+      </div>
+
+      <!-- แถบแสดงสถานะพื้นที่เก็บข้อมูล -->
+      <div class="storage-bar-wrap" id="storageBarWrap"></div>
+
+      <!-- Desktop: TABLE layout -->
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>วันที่</th>
+              <th>เลขที่</th>
+              <th class="td-name" style="text-align:left;">ชื่อ</th>
+              <th>ประเภท</th>
+              <th id="editColHeader" class="hidden">แก้ไข</th>
+            </tr>
+          </thead>
+          <tbody id="historyTable"></tbody>
+        </table>
+      </div>
+
+      <!-- Mobile: CARD layout (แสดงเฉพาะมือถือ) -->
+      <div class="history-cards" id="historyCards"></div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================
+    ASSIGNMENT PAGE: ระบบงานที่ต้องส่ง
+  ============================================================ -->
+  <div id="assignPage" class="hidden">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+        <h2 style="font-size:1.1rem;">📚 งานที่ต้องส่ง</h2>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <div style="display:flex;background:var(--c1);border-radius:10px;padding:3px;gap:2px;">
+            <button id="viewListBtn" onclick="switchAssignView('list')" style="padding:6px 12px;border-radius:8px;font-size:.78rem;background:var(--c4);color:white;border:none;cursor:pointer;">📋 รายการ</button>
+            <button id="viewCalBtn"  onclick="switchAssignView('cal')"  style="padding:6px 12px;border-radius:8px;font-size:.78rem;background:transparent;color:var(--text);border:none;cursor:pointer;">📅 ปฏิทิน</button>
+          </div>
+          <button class="btn-main" style="padding:9px 14px;font-size:.85rem;" onclick="openAddAssign()">+ เพิ่มงาน</button>
+        </div>
+      </div>
+
+      <!-- สรุปสถิติงาน -->
+      <div class="assign-summary" id="assignSummary"></div>
+
+      <!-- LIST VIEW -->
+      <div id="assignListView">
+        <!-- แท็บเลือกวิชา -->
+        <div class="subject-tabs" id="subjectTabs"></div>
+        <!-- รายการงาน -->
+        <div id="assignList"></div>
+      </div>
+
+      <!-- CALENDAR VIEW -->
+      <div id="assignCalView" class="hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <button onclick="calPrevMonth()" style="padding:7px 14px;border-radius:10px;background:var(--c1);border:none;cursor:pointer;font-size:1rem;">‹</button>
+          <span id="calMonthLabel" style="font-weight:600;font-size:.95rem;"></span>
+          <button onclick="calNextMonth()" style="padding:7px 14px;border-radius:10px;background:var(--c1);border:none;cursor:pointer;font-size:1rem;">›</button>
+        </div>
+        <div id="calGrid"></div>
+        <div id="calDayDetail" style="margin-top:12px;"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============================================================
+  BOTTOM NAV: เมนูนำทางด้านล่าง (Fixed)
+  teacherNav = เมนูครู (มีปุ่มเช็คชื่อ)
+  studentNav = เมนูนักเรียน (ไม่มีปุ่มเช็คชื่อ)
+============================================================ -->
+<div class="bottom-nav hidden" id="teacherNav">
+  <button onclick="openPage('checkPage');initFlow()">📝 เช็คชื่อ</button>
+  <button onclick="openPage('dashboardPage')">📊 Dashboard</button>
+  <button onclick="openPage('historyPage');renderHistory()">🕒 ย้อนหลัง</button>
+  <button onclick="openPage('assignPage');renderAssignPage()">📚 งานที่ต้องส่ง</button>
+  <button onclick="goHome()">🏠 Home</button>
+</div>
+
+<div class="bottom-nav hidden" id="studentNav">
+  <button onclick="openPage('dashboardPage')">📊 สถิติ</button>
+  <button onclick="openPage('historyPage');renderHistory()">📋 ดูย้อนหลัง</button>
+  <button onclick="openPage('assignPage');renderAssignPage()">📚 งานที่ต้องส่ง</button>
+  <button onclick="goHome()">🏠 Home</button>
+</div>
+
+<!-- ============================================================
+  SETTING MODAL: หน้าต่างตั้งค่า (เฉพาะครู)
+  - เปลี่ยนรูปสไลด์
+  - เปลี่ยนรูปพื้นหลัง
+  - ตั้งค่าแก้ไขย้อนหลัง
+  - ลบประวัติ
+  - สถานะ storage
+============================================================ -->
+<div class="modal-wrap" id="settingModal">
+  <div class="modal-box">
+    <h2 style="margin-bottom:18px;">⚙️ ตั้งค่า</h2>
+
+    <!-- รูปสไลด์ -->
+    <div style="margin-bottom:20px;">
+      <div class="setting-title">🖼️ รูปสไลด์</div>
+      <div class="upload-box">
+        <p style="margin-bottom:6px;font-size:.85rem;color:#aaa;">สไลด์ที่ 1</p>
+        <input type="file" accept="image/*" onchange="changeSlide(event,0)">
+      </div>
+      <div class="upload-box">
+        <p style="margin-bottom:6px;font-size:.85rem;color:#aaa;">สไลด์ที่ 2</p>
+        <input type="file" accept="image/*" onchange="changeSlide(event,1)">
+      </div>
+      <div class="upload-box">
+        <p style="margin-bottom:6px;font-size:.85rem;color:#aaa;">สไลด์ที่ 3</p>
+        <input type="file" accept="image/*" onchange="changeSlide(event,2)">
+      </div>
+    </div>
+
+    <!-- รูปพื้นหลัง -->
+    <div style="margin-bottom:20px;">
+      <div class="setting-title">🌄 รูปพื้นหลัง</div>
+      <div class="upload-box">
+        <input type="file" accept="image/*" onchange="changeBackground(event)">
+      </div>
+      <div class="upload-box">
+        <button class="btn-danger" style="width:100%;" onclick="removeBackground()">🗑️ ลบรูปพื้นหลัง</button>
+      </div>
+    </div>
+
+    <!-- แก้ไขย้อนหลัง -->
+    <div style="margin-bottom:20px;">
+      <div class="setting-title">✏️ แก้ไขข้อมูลย้อนหลัง</div>
+      <div class="upload-box" style="padding:14px;">
+        <p style="font-size:.85rem;color:#aaa;margin-bottom:10px;">เลือกวันที่ต้องการแก้ไข</p>
+        <input type="date" id="retroDate" onchange="loadRetroData()" style="margin-bottom:8px;">
+        <div class="table-wrapper" style="max-height:220px;overflow-y:auto;">
+          <table>
+            <thead>
+              <tr><th>เลขที่</th><th class="td-name" style="text-align:left;">ชื่อ</th><th>ประเภท</th><th>จัดการ</th></tr>
+            </thead>
+            <tbody id="retroTable">
+              <tr><td colspan="4" style="color:#bbb;padding:12px;">เลือกวันที่ก่อน</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- สถานะ Storage -->
+    <div style="margin-bottom:20px;">
+      <div class="setting-title">💾 พื้นที่จัดเก็บ</div>
+      <div class="upload-box" id="settingStorageInfo">
+        <p style="font-size:.85rem;color:#aaa;">กำลังโหลด...</p>
+      </div>
+    </div>
+
+    <!-- ลบข้อมูล -->
+    <div style="margin-bottom:20px;">
+      <div class="setting-title">📂 จัดการข้อมูล</div>
+      <div class="upload-box">
+        <button class="btn-soft" style="width:100%;margin-bottom:8px;" onclick="pruneOldData()">🧹 ลบข้อมูลเก่ากว่า 5 เดือน</button>
+        <button class="btn-danger" style="width:100%;" onclick="clearHistory()">🗑️ ลบประวัติทั้งหมด</button>
+      </div>
+    </div>
+
+    <!-- จัดการวิชา (สำหรับระบบงาน) -->
+    <div style="margin-bottom:20px;">
+      <div class="setting-title">📚 จัดการวิชา (ระบบงานที่ต้องส่ง)</div>
+      <div id="subjectSettingList"></div>
+      <button class="btn-soft" style="width:100%;margin-top:6px;" onclick="openAddSubject()">+ เพิ่มวิชาใหม่</button>
+    </div>
+
+    <button class="btn-main" onclick="closeSetting()" style="width:100%;">✕ ปิด</button>
+  </div>
+</div>
+
+<!-- ============================================================
+  EDIT RECORD MODAL: หน้าต่างแก้ไขรายการ (เฉพาะครู)
+  เปิดจากปุ่ม ✏️ ในตาราง หรือในหน้าตั้งค่า
+  มีปุ่มเปลี่ยนประเภท + ปุ่มลบ
+============================================================ -->
+<div class="modal-wrap" id="retroEditModal">
+  <div class="modal-box" style="max-width:380px;">
+    <h3 style="margin-bottom:4px;">✏️ แก้ไขรายการ</h3>
+    <p id="retroEditName" class="edit-modal-name"></p>
+    <p id="retroEditMeta" class="edit-modal-meta"></p>
+
+    <div style="font-size:.85rem;color:#aaa;margin-bottom:10px;font-weight:600;">เปลี่ยนประเภทเป็น</div>
+    <div class="edit-type-grid">
+      <button class="edit-type-btn" style="background:#e8f5ec;color:#4a9b65;" onclick="applyRetroEdit('ทำเวร')">
+        <span class="eti">🧹</span>ทำเวร
+      </button>
+      <button class="edit-type-btn" style="background:#fff0f0;color:#c75b5b;" onclick="applyRetroEdit('ลา')">
+        <span class="eti">📋</span>ลา
+      </button>
+      <button class="edit-type-btn" style="background:#fff8e8;color:#b87a30;" onclick="applyRetroEdit('มาสาย')">
+        <span class="eti">⏰</span>มาสาย
+      </button>
+    </div>
+
+    <button class="btn-danger" onclick="deleteRetroRecord()" style="width:100%;margin-bottom:8px;">🗑️ ลบรายการนี้</button>
+    <button class="btn-soft"   onclick="closeRetroEdit()"    style="width:100%;">ยกเลิก</button>
+  </div>
+</div>
+
+<!-- ============================================================
+  ADD/EDIT ASSIGNMENT MODAL
+============================================================ -->
+<div class="assign-modal-overlay" id="assignModal">
+  <div class="assign-modal-box">
+    <h3 style="margin-bottom:16px;" id="assignModalTitle">📌 เพิ่มงานใหม่</h3>
+
+    <div class="assign-form-group">
+      <label class="assign-form-label">ชื่องาน / หัวข้อ</label>
+      <input type="text" id="assignTitleInput" placeholder="เช่น รายงานการทดลอง">
+    </div>
+    <div class="assign-form-group">
+      <label class="assign-form-label">วิชา</label>
+      <select id="assignSubjectInput"></select>
+    </div>
+    <div class="assign-form-group">
+      <label class="assign-form-label">รายละเอียด (ไม่จำเป็น)</label>
+      <textarea id="assignDetailInput" placeholder="รายละเอียดเพิ่มเติม..."></textarea>
+    </div>
+    <div class="assign-form-group">
+      <label class="assign-form-label">วันกำหนดส่ง</label>
+      <input type="date" id="assignDueInput">
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:6px;">
+      <button class="btn-soft" style="flex:1;" onclick="closeAssignModal()">ยกเลิก</button>
+      <button class="btn-main" style="flex:2;" onclick="saveAssign()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+  SUBJECT EDIT MODAL (in settings)
+============================================================ -->
+<div class="subj-modal-overlay" id="subjModal">
+  <div class="subj-modal-box">
+    <h3 style="margin-bottom:16px;">✏️ แก้ไขวิชา</h3>
+    <input type="hidden" id="subjEditId">
+    <div class="assign-form-group">
+      <label class="assign-form-label">รหัสวิชา</label>
+      <input type="text" id="subjEditCode" placeholder="เช่น 32201">
+    </div>
+    <div class="assign-form-group">
+      <label class="assign-form-label">ชื่อวิชา</label>
+      <input type="text" id="subjEditName" placeholder="เช่น ภาษาไทย 3">
+    </div>
+    <div class="assign-form-group">
+      <label class="assign-form-label">ชื่อครู</label>
+      <input type="text" id="subjEditTeacher" placeholder="เช่น ครูสุราสินี">
+    </div>
+    <div class="assign-form-group">
+      <label class="assign-form-label">สี</label>
+      <div class="assign-color-picker" id="subjColorPicker"></div>
+    </div>
+    <div class="assign-form-group">
+      <label class="assign-form-label">🔗 ลิงก์ Google Classroom (ไม่จำเป็น)</label>
+      <input type="text" id="subjEditClassroom" placeholder="https://classroom.google.com/...">
+    </div>
+    <div class="assign-form-group">
+      <label class="assign-form-label">📁 ลิงก์ Google Drive (ไม่จำเป็น)</label>
+      <input type="text" id="subjEditDrive" placeholder="https://drive.google.com/...">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:6px;">
+      <button class="btn-soft" style="flex:1;" onclick="closeSubjModal()">ยกเลิก</button>
+      <button class="btn-main" style="flex:2;" onclick="saveSubject()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+  LOADING OVERLAY: แสดงระหว่างส่งข้อมูลไป Google Sheet
+============================================================ -->
+<div class="loading-overlay hidden" id="loadingOverlay">
+  <div class="loading-box">
+    <div class="loader"></div>
+    <p id="loadingMsg">กำลังบันทึกข้อมูล...</p>
+  </div>
+</div>
+
+<!-- ============================================================
+  JAVASCRIPT SECTION
+============================================================ -->
+<script>
+/* ============================================================
+  CONFIG: ค่าคงที่ตั้งต้นของระบบ
+  - STUDENTS: รายชื่อนักเรียนทั้งหมด
+  - SHEET_URL: URL ของ Google Apps Script สำหรับส่งข้อมูล
+  - TEACHER_USER_HASH / TEACHER_PASS_HASH: SHA-256 hash ของ username/password ครู
+    (ไม่เก็บ plain text ใน code เพื่อความปลอดภัย)
+    ค่าปัจจุบัน:
+      username = "teacher"  → TEACHER_USER_HASH
+      password = "1234"     → TEACHER_PASS_HASH
+    ถ้าต้องการเปลี่ยน: เปิด browser console แล้วรัน
+    computeHash("รหัสใหม่").then(h => console.log(h))
+    แล้ว copy ค่ามาวางแทน
+============================================================ */
+var STUDENTS = [
+  {no:1,  id:"07401", name:"นางสาวอภัสรา สมฤทธิ์"},
+  {no:2,  id:"07565", name:"นางสาวพลอยจัน บัวผัน"},
+  {no:3,  id:"07572", name:"นางสาวชุติกาญจน์ แซ่โง้ว"},
+  {no:4,  id:"07577", name:"นางสาวรุ่งทิวา มองมณี"},
+  {no:5,  id:"07581", name:"นางสาวศศิพิมพ์ ประกอบสุข"},
+  {no:6,  id:"07582", name:"นางสาวสโรชา จันทร์น่วม"},
+  {no:7,  id:"07596", name:"นายปิยะ สีสุด"},
+  {no:8,  id:"07598", name:"นายภควัฒน์ ชารีพันธ์"},
+  {no:9,  id:"07628", name:"นายสุรชาติ นิลวรรณา"},
+  {no:10, id:"07632", name:"นางสาวณัฐธิชา โควินทะสุด"},
+  {no:11, id:"07640", name:"นางสาวภัทรกันย์ กองศรี"},
+  {no:12, id:"07641", name:"นางสาวสรัลรัตน์ แซ่เจ็ง"},
+  {no:13, id:"07644", name:"นางสาวสุนิษา อดใจ"},
+  {no:14, id:"07683", name:"นายธนโชติ ทิพยางกูร"},
+  {no:15, id:"07919", name:"นายณัฐกิตต์ เหลืองอ่อน"},
+  {no:16, id:"07921", name:"นายสุทธิพงษ์ แซ่ลี"},
+  {no:17, id:"07939", name:"นางสาวกัญญาภรณ์ หนูเหมือน"},
+  {no:18, id:"08305", name:"นางสาวชลธิชา แก้วคำพันธ์"},
+  {no:20, id:"08307", name:"นางสาวนริญา ดีมา"}
+];
+
+/* URL ของ Google Apps Script Web App สำหรับส่งข้อมูลไป Google Sheet */
+var SHEET_URL = "https://script.google.com/macros/s/AKfycbymN8NlsKnK6gqpD4AAAul5hz_chhKOB788exetLJMXop6hzQqgnCcaCXFcc0u-9KgeSQ/exec";
+
+/*
+  CREDENTIALS ครู — เปลี่ยนตรงนี้ได้เลย
+*/
+var TEACHER_USER = "teacher"; /* username ครู */
+var TEACHER_PASS = "1234";    /* password ครู */
+
+/* รูปสไลด์เริ่มต้นจาก Unsplash (ใช้เมื่อยังไม่มีการอัปโหลด) */
+var DEFAULT_SLIDES = [
+  "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=1200&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1200&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1523240795612-9a054b0db644?q=80&w=1200&auto=format&fit=crop"
+];
+
+/* ============================================================
+  STATE: ตัวแปร state ของระบบ (เปลี่ยนแปลงระหว่าง session)
+============================================================ */
+var isTeacher    = false;          /* true = ครู, false = นักเรียน */
+var monthlyChart = null;           /* instance ของ Chart.js (destroy ก่อนสร้างใหม่) */
+var selectedIds  = [];             /* รายการ id นักเรียนที่เลือกในขั้นตอน flow */
+var selectedType = null;           /* ประเภทที่เลือก: "ทำเวร"/"ลา"/"มาสาย" */
+var slideImages  = JSON.parse(localStorage.getItem("slideImages")) || DEFAULT_SLIDES;
+var curSlide     = 0;              /* index สไลด์ปัจจุบัน */
+var retroEditLogIndex = -1;        /* index ของ record ใน log ที่กำลังแก้ไข (-1 = ไม่มี) */
+
+/* ============================================================
+  INDEXEDDB STORAGE ENGINE
+  ใช้ IndexedDB แทน localStorage สำหรับเก็บ log การเช็คชื่อ
+  เพราะ IndexedDB รองรับข้อมูลขนาดใหญ่ (ปกติ 50MB+ ต่อ origin)
+  เพียงพอสำหรับเก็บข้อมูล 5+ เดือน โดยไม่ต้องกังวล QuotaExceeded
+  localStorage จำกัดที่ ~5MB ซึ่งไม่พอเมื่อเก็บรูป base64 + log
+============================================================ */
+var db = null; /* instance ของ IndexedDB database */
+
+/* เปิด/สร้าง IndexedDB database "attendance_db" version 1
+   คืน Promise ที่ resolve เมื่อพร้อมใช้งาน */
+function openDB() {
+  return new Promise(function(resolve, reject) {
+    if (db) { resolve(db); return; } /* ถ้าเปิดแล้ว ใช้เลย */
+    var req = indexedDB.open("attendance_db", 1);
+    req.onupgradeneeded = function(e) {
+      /* สร้าง object store "logs" ครั้งแรก พร้อม index สำหรับ query ตามวันที่ */
+      var store = e.target.result.createObjectStore("logs", {keyPath:"_idx", autoIncrement:true});
+      store.createIndex("date",      "date",      {unique:false});
+      store.createIndex("studentId", "studentId", {unique:false});
+    };
+    req.onsuccess  = function(e) { db = e.target.result; resolve(db); };
+    req.onerror    = function(e) { reject(e.target.error); };
+  });
+}
+
+/* อ่าน log ทั้งหมดจาก IndexedDB คืน Promise<Array> */
+function getAllLogs() {
+  return openDB().then(function(database) {
+    return new Promise(function(resolve, reject) {
+      var tx    = database.transaction("logs","readonly");
+      var store = tx.objectStore("logs");
+      var req   = store.getAll();
+      req.onsuccess = function() { resolve(req.result || []); };
+      req.onerror   = function() { reject(req.error); };
+    });
+  });
+}
+
+/* เพิ่ม records หลายรายการพร้อมกัน (batch insert) คืน Promise */
+function addLogs(records) {
+  return openDB().then(function(database) {
+    return new Promise(function(resolve, reject) {
+      var tx    = database.transaction("logs","readwrite");
+      var store = tx.objectStore("logs");
+      var count = 0;
+      records.forEach(function(r) { store.add(r); });
+      tx.oncomplete = function() { resolve(); };
+      tx.onerror    = function() { reject(tx.error); };
+    });
+  });
+}
+
+/* อัปเดต record เดียวโดย _idx คืน Promise */
+function updateLog(record) {
+  return openDB().then(function(database) {
+    return new Promise(function(resolve, reject) {
+      var tx    = database.transaction("logs","readwrite");
+      var store = tx.objectStore("logs");
+      var req   = store.put(record);
+      req.onsuccess = function() { resolve(); };
+      req.onerror   = function() { reject(req.error); };
+    });
+  });
+}
+
+/* ลบ record เดียวโดย _idx คืน Promise */
+function deleteLog(idx) {
+  return openDB().then(function(database) {
+    return new Promise(function(resolve, reject) {
+      var tx    = database.transaction("logs","readwrite");
+      var store = tx.objectStore("logs");
+      var req   = store.delete(idx);
+      req.onsuccess = function() { resolve(); };
+      req.onerror   = function() { reject(req.error); };
+    });
+  });
+}
+
+/* ลบ log ทั้งหมด คืน Promise */
+function clearAllLogs() {
+  return openDB().then(function(database) {
+    return new Promise(function(resolve, reject) {
+      var tx    = database.transaction("logs","readwrite");
+      var store = tx.objectStore("logs");
+      var req   = store.clear();
+      req.onsuccess = function() { resolve(); };
+      req.onerror   = function() { reject(req.error); };
+    });
+  });
+}
+
+/* ลบ log ที่เก่ากว่า N เดือนจากวันนี้ คืน Promise<จำนวนที่ลบ> */
+function pruneLogsOlderThan(months) {
+  var cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - months);
+  return getAllLogs().then(function(logs) {
+    var toDelete = logs.filter(function(r) {
+      var iso = thaiDateToISO(r.date);
+      return iso && new Date(iso) < cutoff;
+    });
+    return openDB().then(function(database) {
+      return new Promise(function(resolve, reject) {
+        var tx    = database.transaction("logs","readwrite");
+        var store = tx.objectStore("logs");
+        toDelete.forEach(function(r){ store.delete(r._idx); });
+        tx.oncomplete = function(){ resolve(toDelete.length); };
+        tx.onerror    = function(){ reject(tx.error); };
+      });
+    });
+  });
+}
+
+/* ============================================================
+  MIGRATE: ย้ายข้อมูลเก่าจาก localStorage → IndexedDB
+  ทำครั้งเดียวตอนโหลดหน้า ถ้ามี "flowLog" ใน localStorage
+============================================================ */
+function migrateFromLocalStorage() {
+  var old = localStorage.getItem("flowLog");
+  if (!old) return Promise.resolve();
+  try {
+    var oldLogs = JSON.parse(old);
+    if (!oldLogs || !oldLogs.length) { localStorage.removeItem("flowLog"); return Promise.resolve(); }
+    /* ลบ _idx เดิม (จะได้ key ใหม่จาก autoIncrement) */
+    oldLogs.forEach(function(r){ delete r._idx; });
+    return addLogs(oldLogs).then(function() {
+      localStorage.removeItem("flowLog");
+      showStatus("ย้ายข้อมูลเดิม " + oldLogs.length + " รายการ → ระบบใหม่ ✅");
+    });
+  } catch(e) {
+    return Promise.resolve();
+  }
+}
+
+/* ============================================================
+  SECURITY: SHA-256 Hash function
+  ใช้ Web Crypto API (มาตรฐาน browser ทุกตัว)
+  คืน Promise<string hex>
+  ใช้เปรียบเทียบ password โดยไม่เก็บ plain text
+============================================================ */
+function computeHash(str) {
+  return crypto.subtle.digest("SHA-256", new TextEncoder().encode(str))
+    .then(function(buf) {
+      return Array.from(new Uint8Array(buf))
+        .map(function(b){ return b.toString(16).padStart(2,"0"); })
+        .join("");
+    });
+}
+
+/* ============================================================
+  DATE HELPERS: ฟังก์ชันจัดการวันที่
+============================================================ */
+
+/* คืนวันที่ไทยวันนี้ในรูปแบบ DD/MM/YYYY (พ.ศ.) */
+function getThaiDate() {
+  var n = new Date();
+  return n.getDate().toString().padStart(2,'0') + "/" +
+         (n.getMonth()+1).toString().padStart(2,'0') + "/" +
+         (n.getFullYear() + 543);
+}
+
+/* แปลงวันที่ไทย DD/MM/YYYY(พ.ศ.) → ISO YYYY-MM-DD (ค.ศ.) */
+function thaiDateToISO(thaiDate) {
+  if (!thaiDate) return "";
+  var p = thaiDate.split("/");
+  if (p.length < 3) return "";
+  var year = String(parseInt(p[2]) - 543).padStart(4, '0');
+  return year + "-" + p[1].padStart(2,'0') + "-" + p[0].padStart(2,'0');
+}
+
+/* ชื่อเดือนไทยย่อ (index 1-12) */
+var THAI_MONTHS = ["","ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+
+/* แปลง key "MM/YYYY" → ป้ายชื่อเดือน เช่น "05/2568" → "พ.ค. 2568" */
+function monthKeyToLabel(key) {
+  var p = key.split("/");
+  return THAI_MONTHS[parseInt(p[0])] + " " + p[1];
+}
+
+/* แสดงวันที่วันนี้ในหัวหน้าประวัติ */
+document.getElementById("todayDate").innerHTML = "📅 " + getThaiDate();
+
+/* ============================================================
+  XSS PREVENTION: escape HTML entities ก่อนใส่ใน innerHTML
+  ป้องกันกรณีชื่อนักเรียนมีอักขระพิเศษ เช่น <, >, "
+============================================================ */
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;");
+}
+
+/* ============================================================
+  SAFE LOCALSTORAGE: ใช้เฉพาะกับข้อมูลขนาดเล็ก (รูปสไลด์ settings)
+  log การเช็คชื่อย้ายไป IndexedDB แล้ว
+============================================================ */
+function safeSetItem(key, value) {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch(e) {
+    if (e.name === "QuotaExceededError" || e.code === 22) {
+      showStatus("⚠️ พื้นที่ localStorage เต็ม ลองลบรูปสไลด์เก่า");
+    }
+    return false;
+  }
+}
+
+/* ============================================================
+  STORAGE STATUS: แสดงสถานะพื้นที่ IndexedDB (ประมาณ)
+  ใช้ navigator.storage.estimate() ถ้า browser รองรับ
+============================================================ */
+function updateStorageStatus(targetId) {
+  var el = document.getElementById(targetId);
+  if (!el) return;
+  if (!navigator.storage || !navigator.storage.estimate) {
+    el.innerHTML = '<p style="font-size:.82rem;color:#aaa;">browser ไม่รองรับการตรวจสอบพื้นที่</p>';
+    return;
+  }
+  navigator.storage.estimate().then(function(est) {
+    var used  = est.usage  || 0;
+    var quota = est.quota  || 1;
+    var pct   = Math.min(100, Math.round(used/quota*100));
+    var usedMB  = (used  /1024/1024).toFixed(1);
+    var quotaMB = (quota /1024/1024).toFixed(0);
+    var fillClass = pct > 80 ? "danger" : pct > 50 ? "warn" : "";
+    var html = '<div class="storage-bar-label">💾 ใช้ไป ' + usedMB + ' MB จาก ~' + quotaMB + ' MB (' + pct + '%) — รองรับข้อมูล 5+ เดือน</div>'
+      + '<div class="storage-bar-track"><div class="storage-bar-fill '+ fillClass +'" style="width:'+pct+'%"></div></div>';
+    el.innerHTML = html;
+  });
+}
+
+/* ============================================================
+  AUTH: ฟังก์ชันเข้า/ออกระบบ
+============================================================ */
+
+/* loginTeacher: ตรวจสอบ username+password แบบตรงๆ
+   เปลี่ยน TEACHER_USER / TEACHER_PASS ด้านบนได้เลย */
+function loginTeacher() {
+  var u = document.getElementById("username").value.trim();
+  var p = document.getElementById("password").value;
+  if (!u || !p) { showStatus("กรุณากรอก username และ password"); return; }
+
+  if (u === TEACHER_USER && p === TEACHER_PASS) {
+    isTeacher = true;
+    startSystem();
+  } else {
+    showStatus("❌ username หรือ password ไม่ถูกต้อง");
+  }
+}
+
+/* loginStudent: เข้าระบบแบบนักเรียน ไม่ต้องรหัสผ่าน อ่านอย่างเดียว */
+function loginStudent() {
+  isTeacher = false;
+  startSystem();
+}
+
+/* logout: ล้าง state และ reload หน้า */
+function logout() {
+  if (monthlyChart) { monthlyChart.destroy(); monthlyChart = null; }
+  location.reload();
+}
+
+/* startSystem: เริ่มต้นระบบหลังล็อกอิน
+   - ซ่อน loginPage
+   - แสดง homePage + เมนูที่เหมาะกับ role */
+function startSystem() {
+  document.getElementById("loginPage").classList.add("hidden");
+  document.getElementById("homePage").classList.remove("hidden");
+
+  if (isTeacher) {
+    /* ครู: แสดงเมนูตั้งค่า + logout + ปุ่มแก้ไขในตาราง */
+    document.getElementById("topActions").classList.remove("hidden");
+    document.getElementById("editColHeader").classList.remove("hidden");
+    document.getElementById("teacherNav").classList.remove("hidden");
+  } else {
+    /* นักเรียน: แสดงแค่ logout + เมนูดูย้อนหลัง */
+    document.getElementById("studentActions").classList.remove("hidden");
+    document.getElementById("studentNav").classList.remove("hidden");
+  }
+
+  /* โหลดข้อมูลเริ่มต้น */
+  migrateFromLocalStorage().then(function() {
+    renderHistory();
+    renderChart();
+    updateDashboard();
+  });
+  updateStorageStatus("storageBarWrap");
+  showStatus("เข้าสู่ระบบสำเร็จ ✨");
+}
+
+/* ============================================================
+  PAGE NAVIGATION: สลับระหว่างหน้าต่างๆ
+============================================================ */
+function openPage(id) {
+  ["homePage","checkPage","dashboardPage","historyPage","assignPage"].forEach(function(p) {
+    document.getElementById(p).classList.add("hidden");
+  });
+  document.getElementById(id).classList.remove("hidden");
+  if (id === "dashboardPage") { updateDashboard(); renderChart(); }
+  if (id === "historyPage")   { updateStorageStatus("storageBarWrap"); }
+}
+
+function goHome() {
+  ["checkPage","dashboardPage","historyPage","assignPage"].forEach(function(p) {
+    document.getElementById(p).classList.add("hidden");
+  });
+  document.getElementById("homePage").classList.remove("hidden");
+}
+
+/* ============================================================
+  SLIDES: จัดการ banner slideshow หน้า Home
+============================================================ */
+function renderSlides() {
+  var sc = document.getElementById("slides");
+  var dc = document.getElementById("dots");
+  if (!sc || !dc) return;
+  sc.innerHTML = "";
+  dc.innerHTML = "";
+  slideImages.forEach(function(img, i) {
+    sc.innerHTML += '<div class="slide'+(i===0?' active':'')+'"><img src="'+img+'" loading="lazy"></div>';
+    dc.innerHTML += '<div class="dot'+(i===0?' active':'')+'" onclick="showSlide('+i+')"></div>';
+  });
+}
+renderSlides();
+
+function showSlide(i) {
+  document.querySelectorAll(".slide").forEach(function(s,idx){ s.classList.toggle("active",idx===i); });
+  document.querySelectorAll(".dot").forEach(function(d,idx){ d.classList.toggle("active",idx===i); });
+  curSlide = i;
+}
+/* เปลี่ยนสไลด์อัตโนมัติทุก 4 วินาที */
+setInterval(function(){ showSlide((curSlide+1) % slideImages.length); }, 4000);
+
+/* อัปโหลดรูปสไลด์ใหม่ — บันทึกเป็น base64 ใน localStorage */
+function changeSlide(e, i) {
+  var f = e.target.files[0]; if (!f) return;
+  var r = new FileReader();
+  r.onload = function(ev) {
+    slideImages[i] = ev.target.result;
+    if (safeSetItem("slideImages", JSON.stringify(slideImages))) {
+      renderSlides();
+      showStatus("เปลี่ยนรูปสไลด์ที่ " + (i+1) + " แล้ว ✨");
+    }
+  };
+  r.readAsDataURL(f);
+}
+
+function changeBackground(e) {
+  var f = e.target.files[0]; if (!f) return;
+  var r = new FileReader();
+  r.onload = function(ev) {
+    if (safeSetItem("customBackground", ev.target.result)) {
+      document.body.style.backgroundImage = "url('" + ev.target.result + "')";
+      document.body.style.backgroundSize  = "cover";
+      showStatus("เปลี่ยนพื้นหลังแล้ว ✨");
+    }
+  };
+  r.readAsDataURL(f);
+}
+
+function removeBackground() {
+  localStorage.removeItem("customBackground");
+  document.body.style.backgroundImage = "";
+  showStatus("ลบรูปพื้นหลังแล้ว");
+}
+
+/* โหลดพื้นหลังที่บันทึกไว้จาก localStorage */
+(function loadSavedBackground() {
+  var bg = localStorage.getItem("customBackground");
+  if (bg) {
+    document.body.style.backgroundImage = "url('" + bg + "')";
+    document.body.style.backgroundSize  = "cover";
+  }
+})();
+
+/* ============================================================
+  DASHBOARD: อัปเดตสถิติสรุปประจำวัน
+  นับจาก log วันนี้ — ใช้ last-write-wins (บันทึกครั้งหลังสุด)
+============================================================ */
+function updateDashboard() {
+  getAllLogs().then(function(log) {
+    var today   = getThaiDate();
+    var seenIds = {};
+    log.filter(function(r){ return r.date === today; })
+       .forEach(function(r){ seenIds[r.studentId] = r.action; });
+
+    var checkedCount = Object.keys(seenIds).length;
+    var doneCount    = Object.values(seenIds).filter(function(a){ return a==="ทำเวร"; }).length;
+    var total        = STUDENTS.length;
+
+    document.getElementById("allCount").textContent     = total;
+    document.getElementById("checkedCount").textContent = checkedCount;
+    document.getElementById("doneCount").textContent    = doneCount;
+    document.getElementById("absentCount").textContent  = total - checkedCount;
+    document.getElementById("checkedPct").textContent   = Math.round(checkedCount/total*100) + "%";
+    document.getElementById("donePct").textContent      = Math.round(doneCount/total*100) + "%";
+    document.getElementById("absentPct").textContent    = Math.round((total-checkedCount)/total*100) + "%";
+  });
+}
+
+/* ============================================================
+  HELPERS: icon และ badge class ตามประเภท
+============================================================ */
+function actionIcon(a) {
+  return a==="ทำเวร" ? "🧹" : a==="ลา" ? "📋" : "⏰";
+}
+function actionBadgeClass(a) {
+  return a==="ทำเวร" ? "badge-work" : a==="ลา" ? "badge-leave" : "badge-late";
+}
+
+/* ============================================================
+  HISTORY: แสดงตารางย้อนหลัง
+  - Desktop: HTML table
+  - Mobile: card layout (CSS ควบคุมการซ่อน/แสดง)
+  - ครู: มีปุ่มแก้ไขทุกรายการ
+  - นักเรียน: อ่านอย่างเดียว
+  filterISO: ถ้ากรองตามวันที่ส่ง string "YYYY-MM-DD" มา
+============================================================ */
+function renderHistory(filterISO) {
+  getAllLogs().then(function(log) {
+    var tbody = document.getElementById("historyTable");
+    var cards = document.getElementById("historyCards");
+
+    /* กรองหรือเรียงลำดับ */
+    var rows = filterISO
+      ? log.filter(function(r){ return thaiDateToISO(r.date) === filterISO; })
+           .sort(function(a,b){ return a.no - b.no; })
+      : log.slice().reverse(); /* ล่าสุดก่อน */
+
+    var colSpan = isTeacher ? 5 : 4;
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="'+colSpan+'" style="color:#bbb;padding:20px;">ไม่มีข้อมูล</td></tr>';
+      if (cards) cards.innerHTML = '<p style="text-align:center;color:#bbb;padding:20px;">ไม่มีข้อมูล</p>';
+      return;
+    }
+
+    /* สร้าง TABLE HTML */
+    var tableHtml = "";
+    /* สร้าง CARD HTML สำหรับมือถือ */
+    var cardHtml  = "";
+
+    rows.forEach(function(r) {
+      var badge   = actionBadgeClass(r.action);
+      var editBtn = isTeacher
+        ? '<button onclick="openRetroEdit('+r._idx+')" style="background:var(--c2);border:none;border-radius:8px;padding:5px 9px;cursor:pointer;font-family:Mitr,sans-serif;font-size:.75rem;white-space:nowrap;">✏️ แก้</button>'
+        : '';
+
+      /* TABLE ROW */
+      tableHtml +=
+        '<tr>'
+        + '<td style="white-space:nowrap;">' + escapeHtml(r.date) + '</td>'
+        + '<td>' + escapeHtml(String(r.no)) + '</td>'
+        + '<td class="td-name">' + escapeHtml(r.name) + '</td>'
+        + '<td><span class="retro-badge '+badge+'">' + actionIcon(r.action) + ' ' + escapeHtml(r.action) + '</span></td>'
+        + (isTeacher ? '<td>' + editBtn + '</td>' : '')
+        + '</tr>';
+
+      /* CARD ROW (มือถือ) */
+      cardHtml +=
+        '<div class="history-card">'
+        + '<div class="hc-no">'  + escapeHtml(String(r.no)) + '<br><span style="font-size:.6rem;color:#bbb;">เลขที่</span></div>'
+        + '<div class="hc-mid">'
+        +   '<div class="hc-name">' + escapeHtml(r.name) + '</div>'
+        +   '<div class="hc-date">' + escapeHtml(r.date) + '</div>'
+        + '</div>'
+        + '<div class="hc-action"><span class="retro-badge '+badge+'">' + actionIcon(r.action) + ' ' + escapeHtml(r.action) + '</span></div>'
+        + (isTeacher ? '<div class="hc-edit">' + editBtn + '</div>' : '')
+        + '</div>';
+    });
+
+    tbody.innerHTML = tableHtml;
+    if (cards) cards.innerHTML = cardHtml;
+  });
+}
+
+function filterHistoryDate() {
+  var sel = document.getElementById("historyDate").value;
+  renderHistory(sel || null);
+}
+function clearHistoryFilter() {
+  document.getElementById("historyDate").value = "";
+  renderHistory();
+}
+
+/* ลบประวัติทั้งหมด — ยืนยันก่อนลบ */
+function clearHistory() {
+  if (!confirm("ลบประวัติทั้งหมด? ไม่สามารถกู้คืนได้")) return;
+  clearAllLogs().then(function() {
+    renderHistory(); renderChart(); updateDashboard();
+    showStatus("ลบประวัติทั้งหมดแล้ว 🗑️");
+  });
+}
+
+/* ลบข้อมูลเก่ากว่า 5 เดือน — ให้ system เก็บข้อมูลได้นาน */
+function pruneOldData() {
+  if (!confirm("ลบข้อมูลที่เก่ากว่า 5 เดือน?")) return;
+  pruneLogsOlderThan(5).then(function(count) {
+    renderHistory(); renderChart(); updateDashboard();
+    showStatus("ลบข้อมูลเก่า " + count + " รายการ ✅ เก็บ 5 เดือนล่าสุดไว้");
+  });
+}
+
+/* ============================================================
+  CHART: กราฟแท่งสรุปรายเดือน (Chart.js)
+  destroy ก่อนสร้างใหม่ทุกครั้งเพื่อป้องกัน memory leak
+============================================================ */
+function renderChart() {
+  getAllLogs().then(function(log) {
+    var md = {};
+    log.forEach(function(r) {
+      var p = r.date.split("/");
+      var m = p[1] + "/" + p[2]; /* key: "MM/YYYY" */
+      if (!md[m]) md[m] = {work:0, leave:0, late:0};
+      if (r.action==="ทำเวร")   md[m].work++;
+      else if (r.action==="ลา") md[m].leave++;
+      else                       md[m].late++;
+    });
+
+    var keys   = Object.keys(md).sort();
+    var labels = keys.length ? keys.map(monthKeyToLabel) : ["ยังไม่มีข้อมูล"];
+    var canvas = document.getElementById("monthlyChart"); if (!canvas) return;
+    var ctx    = canvas.getContext("2d");
+
+    if (monthlyChart) { monthlyChart.destroy(); monthlyChart = null; }
+
+    monthlyChart = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [
+          {label:"ทำเวร",  data:keys.map(function(k){return md[k].work;}),  backgroundColor:"#89b89a"},
+          {label:"ลา",     data:keys.map(function(k){return md[k].leave;}), backgroundColor:"#e58d8d"},
+          {label:"มาสาย", data:keys.map(function(k){return md[k].late;}),  backgroundColor:"#e5c08d"}
+        ]
+      },
+      options:{responsive:true, plugins:{legend:{labels:{font:{family:"Mitr"}}}}}
+    });
+  });
+}
+
+/* ============================================================
+  FLOW: ขั้นตอนเช็คชื่อ (เฉพาะครู)
+============================================================ */
+
+/* initFlow: รีเซ็ต flow กลับ Step 1 */
+function initFlow() {
+  var lockedMsg = document.getElementById("flowLockedMsg");
+  if (!isTeacher) {
+    lockedMsg.classList.remove("hidden");
+    [1,2,3].forEach(function(i){ document.getElementById("flowStep"+i).classList.add("hidden"); });
+    return;
+  }
+  lockedMsg.classList.add("hidden");
+  selectedIds  = [];
+  selectedType = null;
+  document.getElementById("flowSearch").value = "";
+  renderFlowStudents();
+  flowShowStep(1);
+}
+
+/* renderFlowStudents: วาด grid นักเรียนพร้อมกรองตาม keyword */
+function renderFlowStudents() {
+  var searchEl = document.getElementById("flowSearch");
+  var kw       = searchEl ? searchEl.value.toLowerCase() : "";
+  var grid     = document.getElementById("flowStudentGrid");
+  if (!grid) return;
+
+  var html = "";
+  STUDENTS.forEach(function(s) {
+    if ((s.name + s.id + s.no).toLowerCase().includes(kw)) {
+      var sel = selectedIds.indexOf(s.id) > -1;
+      html +=
+        '<div class="student-card'+(sel?" selected":"")+'" onclick="toggleStudent(\''+s.id+'\')">'
+        + '<div class="snum">เลขที่ ' + escapeHtml(String(s.no)) + '</div>'
+        + '<div class="sname">' + escapeHtml(s.name) + '</div>'
+        + (sel ? '<div class="stick">✓ เลือกแล้ว</div>' : '')
+        + '</div>';
+    }
+  });
+  grid.innerHTML = html;
+
+  var n = selectedIds.length;
+  var selCountEl = document.getElementById("selCount");
+  if (selCountEl) selCountEl.textContent = "เลือกแล้ว " + n + " คน";
+  var btn = document.getElementById("flowBtn1");
+  if (btn) { btn.disabled = n===0; btn.style.opacity = n===0?"0.5":"1"; }
+}
+
+/* toggleStudent: เลือก/ยกเลิกนักเรียนคนเดียว */
+function toggleStudent(id) {
+  var idx = selectedIds.indexOf(id);
+  if (idx > -1) selectedIds.splice(idx, 1);
+  else           selectedIds.push(id);
+  renderFlowStudents();
+}
+
+/* toggleSelectAll: เลือก/ยกเลิกนักเรียนที่แสดงอยู่ทั้งหมด */
+function toggleSelectAll() {
+  var searchEl = document.getElementById("flowSearch");
+  var kw = searchEl ? searchEl.value.toLowerCase() : "";
+  var visible = STUDENTS.filter(function(s){
+    return (s.name + s.id + s.no).toLowerCase().includes(kw);
+  });
+  var allSel = visible.every(function(s){ return selectedIds.indexOf(s.id) > -1; });
+  if (allSel) {
+    visible.forEach(function(s){ var i=selectedIds.indexOf(s.id); if(i>-1) selectedIds.splice(i,1); });
+  } else {
+    visible.forEach(function(s){ if(selectedIds.indexOf(s.id)===-1) selectedIds.push(s.id); });
+  }
+  renderFlowStudents();
+}
+
+/* selectType: เลือกประเภทใน Step 2 */
+function selectType(type, el) {
+  selectedType = type;
+  ["tc-work","tc-leave","tc-late"].forEach(function(id) {
+    document.getElementById(id).classList.remove("sel-work","sel-leave","sel-late");
+  });
+  el.classList.add(type==="ทำเวร"?"sel-work":type==="ลา"?"sel-leave":"sel-late");
+  var btn = document.getElementById("flowBtn2");
+  btn.disabled = false; btn.style.opacity = "1";
+}
+
+/* flowShowStep: สลับแสดง Step และอัปเดต stepper indicator */
+function flowShowStep(n) {
+  [1,2,3].forEach(function(i) {
+    document.getElementById("flowStep"+i).classList.toggle("hidden", i!==n);
+    var sc = document.getElementById("sc"+i), sl = document.getElementById("sl"+i);
+    sc.classList.remove("active","done"); sl.classList.remove("active","done");
+  });
+  [1,2].forEach(function(i){ document.getElementById("line"+i).classList.remove("done"); });
+  for (var i=1; i<n; i++) {
+    document.getElementById("sc"+i).classList.add("done");
+    document.getElementById("sl"+i).classList.add("done");
+    document.getElementById("line"+i).classList.add("done");
+  }
+  document.getElementById("sc"+n).classList.add("active");
+  document.getElementById("sl"+n).classList.add("active");
+
+  /* Step 2: แสดงชื่อนักเรียนที่เลือก */
+  if (n === 2) {
+    var names = selectedIds.map(function(id){
+      var s = STUDENTS.find(function(x){ return x.id===id; });
+      return s ? s.name : "";
+    });
+    document.getElementById("step2sub").textContent = "เลือก "+selectedIds.length+" คน: "+names.join(", ");
+  }
+
+  /* Step 3: แสดงสรุปก่อนบันทึก */
+  if (n === 3) {
+    document.getElementById("cfDate").textContent  = getThaiDate();
+    document.getElementById("cfType").textContent  = actionIcon(selectedType) + " " + selectedType;
+    document.getElementById("cfCount").textContent = selectedIds.length;
+    var list = document.getElementById("cfList");
+    var html = "";
+    var sorted = selectedIds.map(function(id){
+      return STUDENTS.find(function(x){ return x.id===id; });
+    }).filter(Boolean).sort(function(a,b){ return a.no - b.no; });
+    sorted.forEach(function(s) {
+      html += '<div class="confirm-list-item">'
+        + '<span class="cno">' + escapeHtml(String(s.no)) + '</span>'
+        + '<span class="cname">' + escapeHtml(s.name) + '</span>'
+        + '</div>';
+    });
+    list.innerHTML = html;
+  }
+}
+
+/* flowNext: ไปขั้นตอนถัดไป/ก่อนหน้า พร้อม validation */
+function flowNext(step) {
+  if (step===2 && selectedIds.length===0) { showStatus("กรุณาเลือกนักเรียนอย่างน้อย 1 คน"); return; }
+  if (step===3 && !selectedType)           { showStatus("กรุณาเลือกประเภท"); return; }
+  flowShowStep(step);
+}
+
+/* ============================================================
+  SUBMIT FLOW: บันทึกการเช็คชื่อ
+  1. ส่งข้อมูลไป Google Sheet ก่อน
+  2. ถ้าสำเร็จ → บันทึกลง IndexedDB
+  3. ถ้าล้มเหลว → แจ้งเตือน ไม่บันทึก local
+============================================================ */
+function submitFlow() {
+  if (!isTeacher) { showStatus("เฉพาะครูเท่านั้น"); return; }
+  if (!selectedIds.length || !selectedType) { showStatus("ข้อมูลไม่ครบ"); return; }
+
+  showLoading("กำลังส่งข้อมูล...");
+  var today   = getThaiDate();
+  var time    = new Date().toLocaleTimeString("th-TH");
+  var records = selectedIds.map(function(id) {
+    var s = STUDENTS.find(function(x){ return x.id===id; });
+    return {date:today, timestamp:time, no:s.no, studentId:s.id, name:s.name, action:selectedType};
+    /* _idx จะถูกกำหนดโดย IndexedDB autoIncrement ตอน addLogs */
+  });
+  var payload = {type:"flow_batch", date:today, timestamp:time, action:selectedType, records:records};
+
+  fetch(SHEET_URL + "?data=" + encodeURIComponent(JSON.stringify(payload)))
+    .then(function(r){ return r.text(); })
+    .then(function(responseText) {
+      if (responseText && responseText.toLowerCase().includes("error")) {
+        throw new Error("Apps Script error: " + responseText);
+      }
+      /* Sheet สำเร็จ → บันทึกลง IndexedDB */
+      return addLogs(records);
+    })
+    .then(function() {
+      hideLoading();
+      showStatus("บันทึกสำเร็จ ✅ " + selectedIds.length + " คน → " + selectedType);
+      renderHistory(); updateDashboard(); renderChart();
+      setTimeout(function(){ initFlow(); }, 1000);
+    })
+    .catch(function(err) {
+      console.error(err);
+      hideLoading();
+      showStatus("เกิดข้อผิดพลาด ❌ ข้อมูลไม่ถูกบันทึก");
+    });
+}
+
+/* ============================================================
+  RETROACTIVE EDIT: แก้ไขข้อมูลย้อนหลัง (เฉพาะครู)
+  - openRetroEdit(idx): เปิด modal แก้ไขโดยใช้ _idx ของ IndexedDB
+  - applyRetroEdit(newAction): เปลี่ยนประเภท → sync Sheet → อัป DB
+  - deleteRetroRecord(): ลบรายการ → sync Sheet → ลบจาก DB
+============================================================ */
+
+/* โหลดรายการของวันที่เลือกในหน้าตั้งค่า */
+function loadRetroData() {
+  var sel   = document.getElementById("retroDate").value;
+  var tbody = document.getElementById("retroTable");
+  tbody.innerHTML = "";
+
+  if (!sel) {
+    tbody.innerHTML = '<tr><td colspan="4" style="color:#bbb;padding:12px;">เลือกวันที่ก่อน</td></tr>';
+    return;
+  }
+
+  getAllLogs().then(function(log) {
+    var filtered = log
+      .filter(function(r){ return thaiDateToISO(r.date) === sel; })
+      .sort(function(a,b){ return a.no - b.no; });
+
+    if (!filtered.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="color:#bbb;padding:12px;">ไม่มีข้อมูลในวันนี้</td></tr>';
+      return;
+    }
+
+    var html = "";
+    filtered.forEach(function(r) {
+      var badge = actionBadgeClass(r.action);
+      html +=
+        '<tr>'
+        + '<td>' + escapeHtml(String(r.no)) + '</td>'
+        + '<td class="td-name">' + escapeHtml(r.name) + '</td>'
+        + '<td><span class="retro-badge '+badge+'">' + actionIcon(r.action) + ' ' + escapeHtml(r.action) + '</span></td>'
+        + '<td><button onclick="openRetroEdit('+r._idx+')" style="background:var(--c2);border:none;border-radius:8px;padding:5px 9px;cursor:pointer;font-family:Mitr,sans-serif;font-size:.75rem;white-space:nowrap;">✏️ แก้</button></td>'
+        + '</tr>';
+    });
+    tbody.innerHTML = html;
+  });
+}
+
+/* เปิด modal แก้ไข — ดึงข้อมูลจาก IndexedDB ด้วย _idx */
+function openRetroEdit(idx) {
+  retroEditLogIndex = idx;
+  openDB().then(function(database) {
+    var tx    = database.transaction("logs","readonly");
+    var store = tx.objectStore("logs");
+    var req   = store.get(idx);
+    req.onsuccess = function() {
+      var r = req.result;
+      if (!r) { showStatus("ไม่พบรายการ"); return; }
+      document.getElementById("retroEditName").textContent = r.name;
+      document.getElementById("retroEditMeta").textContent = "เลขที่ " + r.no + " | " + r.date + " | ปัจจุบัน: " + actionIcon(r.action) + " " + r.action;
+      document.getElementById("retroEditModal").style.display = "flex";
+    };
+  });
+}
+
+function closeRetroEdit() {
+  document.getElementById("retroEditModal").style.display = "none";
+  retroEditLogIndex = -1;
+}
+
+/* applyRetroEdit: เปลี่ยนประเภทของรายการ
+   1. อ่าน record จาก DB
+   2. ส่ง payload ไป Google Sheet
+   3. ถ้าสำเร็จ → updateLog ใน IndexedDB */
+function applyRetroEdit(newAction) {
+  if (retroEditLogIndex < 0) return;
+  openDB().then(function(database) {
+    var tx    = database.transaction("logs","readonly");
+    var store = tx.objectStore("logs");
+    var req   = store.get(retroEditLogIndex);
+    req.onsuccess = function() {
+      var r = req.result;
+      if (!r) return;
+      var oldAction = r.action;
+      showLoading("กำลังอัปเดต...");
+      var payload = {
+        type: "retro_edit",
+        date: r.date, studentId: r.studentId,
+        no: r.no, name: r.name,
+        oldAction: oldAction, newAction: newAction,
+        timestamp: r.timestamp
+      };
+      fetch(SHEET_URL + "?data=" + encodeURIComponent(JSON.stringify(payload)))
+        .then(function(res){ return res.text(); })
+        .then(function(rt) {
+          if (rt && rt.toLowerCase().includes("error")) throw new Error(rt);
+          r.action = newAction;
+          return updateLog(r);
+        })
+        .then(function() {
+          hideLoading();
+          closeRetroEdit();
+          showStatus("เปลี่ยนเป็น " + actionIcon(newAction) + " " + newAction + " แล้ว ✅");
+          renderHistory(); updateDashboard(); renderChart();
+          loadRetroData();
+        })
+        .catch(function(err) {
+          console.error(err);
+          hideLoading();
+          showStatus("❌ อัปเดต Sheet ไม่สำเร็จ ข้อมูลไม่เปลี่ยน");
+        });
+    };
+  });
+}
+
+/* deleteRetroRecord: ลบรายการ
+   1. ส่ง payload ไป Google Sheet
+   2. ถ้าสำเร็จ → deleteLog จาก IndexedDB */
+function deleteRetroRecord() {
+  if (retroEditLogIndex < 0) return;
+  if (!confirm("ลบรายการนี้?")) return;
+  openDB().then(function(database) {
+    var tx    = database.transaction("logs","readonly");
+    var store = tx.objectStore("logs");
+    var req   = store.get(retroEditLogIndex);
+    req.onsuccess = function() {
+      var r = req.result;
+      if (!r) return;
+      showLoading("กำลังลบ...");
+      var payload = {
+        type: "retro_delete",
+        date: r.date, studentId: r.studentId,
+        no: r.no, name: r.name,
+        action: r.action, timestamp: r.timestamp
+      };
+      fetch(SHEET_URL + "?data=" + encodeURIComponent(JSON.stringify(payload)))
+        .then(function(res){ return res.text(); })
+        .then(function(rt) {
+          if (rt && rt.toLowerCase().includes("error")) throw new Error(rt);
+          return deleteLog(retroEditLogIndex);
+        })
+        .then(function() {
+          hideLoading();
+          closeRetroEdit();
+          showStatus("ลบรายการแล้ว 🗑️");
+          renderHistory(); updateDashboard(); renderChart();
+          loadRetroData();
+        })
+        .catch(function(err) {
+          console.error(err);
+          hideLoading();
+          showStatus("❌ ลบจาก Sheet ไม่สำเร็จ ข้อมูลไม่เปลี่ยน");
+        });
+    };
+  });
+}
+
+/* ============================================================
+  SETTING MODAL: เปิด/ปิด และโหลดข้อมูล storage
+============================================================ */
+function openSetting() {
+  document.getElementById("settingModal").style.display = "flex";
+  updateStorageStatus("settingStorageInfo");
+  renderSubjectSetting();
+}
+function closeSetting() {
+  document.getElementById("settingModal").style.display = "none";
+}
+
+/* ปิด modal เมื่อคลิก overlay ด้านนอก */
+window.onclick = function(e) {
+  if (e.target === document.getElementById("settingModal"))    closeSetting();
+  if (e.target === document.getElementById("retroEditModal")) closeRetroEdit();
+};
+
+/* ============================================================
+  LOADING OVERLAY: แสดง/ซ่อนหน้าจอโหลด
+============================================================ */
+function showLoading(msg) {
+  document.getElementById("loadingMsg").textContent = msg || "กำลังบันทึก...";
+  document.getElementById("loadingOverlay").classList.remove("hidden");
+}
+function hideLoading() {
+  document.getElementById("loadingOverlay").classList.add("hidden");
+}
+
+/* ============================================================
+  STATUS TOAST: แสดงข้อความแจ้งเตือนชั่วคราว (ล่างขวา)
+  ใช้ textContent แทน innerHTML ป้องกัน XSS
+============================================================ */
+function showStatus(text) {
+  var o = document.getElementById("__sp"); if (o) o.remove();
+  var p = document.createElement("div");
+  p.id = "__sp";
+  p.textContent = text;
+  Object.assign(p.style, {
+    position:"fixed", right:"14px", bottom:"88px",
+    background:"#D9A299", color:"white",
+    padding:"12px 16px", borderRadius:"14px",
+    zIndex:"999999", fontFamily:"Mitr,sans-serif",
+    boxShadow:"0 6px 18px rgba(0,0,0,.15)",
+    fontSize:".88rem", maxWidth:"80vw", lineHeight:"1.4"
+  });
+  document.body.appendChild(p);
+  setTimeout(function() {
+    p.style.transition = ".3s"; p.style.opacity = "0";
+    setTimeout(function(){ p.remove(); }, 300);
+  }, 2500);
+}
+
+/* ============================================================
+  ASSIGNMENT SYSTEM: ระบบงานที่ต้องส่ง
+  เก็บข้อมูลใน localStorage:
+    - "subjects_v1": รายการวิชา [{id, code, name, teacher, color}]
+    - "assignments_v1": รายการงาน [{id, subjectId, title, detail, due, done, createdAt}]
+============================================================ */
+
+/* วิชาเริ่มต้นจากรูปที่ 2 */
+var DEFAULT_SUBJECTS = [
+  {id:"s1", code:"30201", name:"คณิตศาสตร์ 3", teacher:"ครูนิภาพร",   color:"#e8c4c4"},
+  {id:"s2", code:"30205", name:"ชีววิทยา 3",   teacher:"ครูจิราภรณ์", color:"#c4e8c9"},
+  {id:"s3", code:"30203", name:"ฟิสิกส์ 3",    teacher:"ครูอัจฉรา",   color:"#c4d8e8"},
+  {id:"s4", code:"32201", name:"ภาษาไทย 3",    teacher:"ครูสุราสินี",  color:"#e8dfc4"},
+  {id:"s5", code:"32203", name:"เคมี 3",        teacher:"ครูจิตติยา",  color:"#d4c4e8"},
+  {id:"s6", code:"32205", name:"การงานอาชีพ 1",teacher:"ครูอาวุธ",    color:"#e8c4dc"},
+  {id:"s7", code:"30103", name:"สังคมศึกษา",   teacher:"ครูผู้สอน",    color:"#c4e8e4"},
+  {id:"s8", code:"30201", name:"คณิตศาสตร์",    teacher:"ครูนิภาพร",   color:"#f0e8c4"}
+];
+
+var SUBJECT_COLORS = [
+  "#e8c4c4","#c4e8c9","#c4d8e8","#e8dfc4","#d4c4e8",
+  "#e8c4dc","#c4e8e4","#f0e8c4","#dce8c4","#e8e4c4"
+];
+
+var subjects = [];
+var assignments = [];
+var currentSubjectFilter = "all";
+var editingAssignId = null;
+var editingSubjId = null;
+
+/* โหลดข้อมูลจาก localStorage */
+function loadAssignData() {
+  var rawS = localStorage.getItem("subjects_v1");
+  subjects = rawS ? JSON.parse(rawS) : JSON.parse(JSON.stringify(DEFAULT_SUBJECTS));
+  var rawA = localStorage.getItem("assignments_v1");
+  assignments = rawA ? JSON.parse(rawA) : [];
+}
+
+function saveAssignData() {
+  localStorage.setItem("subjects_v1", JSON.stringify(subjects));
+  localStorage.setItem("assignments_v1", JSON.stringify(assignments));
+}
+
+/* คืน subject object จาก id */
+function getSubject(id) {
+  return subjects.find(function(s){ return s.id === id; }) || {code:"",name:"ไม่ระบุวิชา",teacher:"",color:"#eee"};
+}
+
+/* วันที่วันนี้ในรูป YYYY-MM-DD */
+function todayISO() {
+  var n = new Date();
+  return n.getFullYear() + "-" +
+         String(n.getMonth()+1).padStart(2,"0") + "-" +
+         String(n.getDate()).padStart(2,"0");
+}
+
+/* แปลง YYYY-MM-DD → DD/MM/พ.ศ. */
+function isoToThai(iso) {
+  if (!iso) return "";
+  var p = iso.split("-");
+  return p[2] + "/" + p[1] + "/" + (parseInt(p[0]) + 543);
+}
+
+/* สถานะของงาน: "done","overdue","due-soon","ok" */
+function assignStatus(a) {
+  if (a.done) return "done";
+  var today = todayISO();
+  if (!a.due) return "ok";
+  if (a.due < today) return "overdue";
+  var diff = (new Date(a.due) - new Date(today)) / 86400000;
+  if (diff <= 3) return "due-soon";
+  return "ok";
+}
+
+/* ============================================================
+  RENDER: หน้างานที่ต้องส่ง
+============================================================ */
+function renderAssignPage() {
+  loadAssignData();
+  if (!calYear) initCal();
+  renderAssignSummary();
+  renderSubjectTabs();
+  renderAssignList();
+  if (assignViewMode === "cal") renderCal();
+}
+
+function renderAssignSummary() {
+  var total   = assignments.length;
+  var done    = assignments.filter(function(a){ return a.done; }).length;
+  var overdue = assignments.filter(function(a){ return assignStatus(a) === "overdue"; }).length;
+  var pending = total - done;
+  document.getElementById("assignSummary").innerHTML =
+    '<div class="assign-sum-card"><p>ทั้งหมด</p><h2>' + total + '</h2></div>' +
+    '<div class="assign-sum-card"><p>รอส่ง</p><h2 style="color:var(--yellow);">' + pending + '</h2></div>' +
+    '<div class="assign-sum-card"><p>ส่งแล้ว</p><h2 style="color:var(--green);">' + done + '</h2></div>' +
+    '<div class="assign-sum-card"><p>เกินกำหนด</p><h2 style="color:var(--red);">' + overdue + '</h2></div>';
+}
+
+function renderSubjectTabs() {
+  var html = '<button class="subject-tab' + (currentSubjectFilter === "all" ? " active" : "") +
+             '" onclick="filterBySubject(\'all\')">📚 ทั้งหมด</button>';
+  subjects.forEach(function(s) {
+    var count = assignments.filter(function(a){ return a.subjectId === s.id && !a.done; }).length;
+    html += '<button class="subject-tab' + (currentSubjectFilter === s.id ? " active" : "") +
+            '" onclick="filterBySubject(\'' + s.id + '\')" style="border-color:' + s.color + ';">' +
+            escapeHtml(s.name) + (count > 0 ? '<span style="background:var(--c4);color:white;border-radius:6px;padding:1px 6px;font-size:.68rem;margin-left:4px;">' + count + '</span>' : "") +
+            '</button>';
+  });
+  document.getElementById("subjectTabs").innerHTML = html;
+}
+
+function filterBySubject(id) {
+  currentSubjectFilter = id;
+  renderSubjectTabs();
+  renderAssignList();
+}
+
+function renderAssignList() {
+  var filtered = assignments.filter(function(a) {
+    return currentSubjectFilter === "all" || a.subjectId === currentSubjectFilter;
+  });
+  /* เรียงลำดับ: ยังไม่ส่ง (ใกล้ deadline ก่อน) → ส่งแล้ว */
+  filtered.sort(function(a, b) {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    if (!a.due && !b.due) return 0;
+    if (!a.due) return 1;
+    if (!b.due) return -1;
+    return a.due < b.due ? -1 : 1;
+  });
+
+  if (filtered.length === 0) {
+    document.getElementById("assignList").innerHTML =
+      '<div class="assign-empty">📭 ยังไม่มีงาน<br><span style="font-size:.8rem;">กดปุ่ม <b>+ เพิ่มงาน</b> ด้านบนขวา</span></div>';
+    return;
+  }
+
+  var today = todayISO();
+
+  var html = "";
+  filtered.forEach(function(a) {
+    var subj   = getSubject(a.subjectId);
+    var status = assignStatus(a);
+
+    /* deadline label */
+    var dueLabel = "";
+    if (a.due) {
+      var diffDays = Math.round((new Date(a.due) - new Date(today)) / 86400000);
+      if (status === "done") {
+        dueLabel = "ส่งแล้ว · กำหนด " + isoToThai(a.due);
+      } else if (status === "overdue") {
+        dueLabel = "⚠️ เกินกำหนดมา " + Math.abs(diffDays) + " วัน (ครบ " + isoToThai(a.due) + ")";
+      } else if (diffDays === 0) {
+        dueLabel = "⏰ ส่งวันนี้!";
+      } else if (diffDays === 1) {
+        dueLabel = "⏰ พรุ่งนี้เป็นวันสุดท้าย (" + isoToThai(a.due) + ")";
+      } else if (diffDays <= 3) {
+        dueLabel = "⏰ อีก " + diffDays + " วัน (" + isoToThai(a.due) + ")";
+      } else {
+        dueLabel = "📅 กำหนดส่ง " + isoToThai(a.due) + "  (อีก " + diffDays + " วัน)";
+      }
+    } else {
+      dueLabel = "📅 ไม่ระบุวันส่ง";
+    }
+
+    var deadlineColor = status === "overdue" ? "#c75b5b" : status === "due-soon" ? "#b87a30" : status === "done" ? "#aaa" : "#888";
+
+    var checkIcon = a.done ? "✓" : "";
+    var editBtn = isTeacher
+      ? '<button class="assign-edit-btn" onclick="openEditAssign(\'' + a.id + '\')">✏️</button>' +
+        '<button class="assign-del-btn"  onclick="deleteAssign(\'' + a.id + '\')">🗑️</button>'
+      : '';
+
+    html += '<div class="assign-card ' + status + '" id="acard-' + a.id + '">' +
+      '<div class="assign-check ' + (a.done ? "checked" : "") + '" onclick="toggleAssignDone(\'' + a.id + '\')">' + checkIcon + '</div>' +
+      '<div class="assign-body">' +
+        '<div style="margin-bottom:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
+          '<span style="background:' + subj.color + ';padding:2px 10px;border-radius:8px;color:#555;font-size:.74rem;font-weight:600;">' +
+            escapeHtml(subj.name) +
+          '</span>' +
+          (subj.classroom ? '<a href="' + escapeHtml(subj.classroom) + '" target="_blank" class="subj-link-btn">🎓 Classroom</a>' : '') +
+          (subj.drive     ? '<a href="' + escapeHtml(subj.drive)     + '" target="_blank" class="subj-link-btn">📁 Drive</a>'     : '') +
+        '</div>' +
+        '<div class="assign-title">' + escapeHtml(a.title) + '</div>' +
+        (a.detail ? '<div style="font-size:.78rem;color:#aaa;margin-bottom:4px;">' + escapeHtml(a.detail) + '</div>' : '') +
+        '<div style="font-size:.76rem;font-weight:600;color:' + deadlineColor + ';margin-top:3px;">' + dueLabel + '</div>' +
+      '</div>' +
+      (editBtn ? '<div class="assign-actions">' + editBtn + '</div>' : '') +
+    '</div>';
+  });
+  document.getElementById("assignList").innerHTML = html;
+}
+
+/* ============================================================
+  VIEW SWITCH: list ↔ calendar
+============================================================ */
+var assignViewMode = "list";
+
+function switchAssignView(mode) {
+  assignViewMode = mode;
+  document.getElementById("assignListView").classList.toggle("hidden", mode !== "list");
+  document.getElementById("assignCalView").classList.toggle("hidden",  mode !== "cal");
+  document.getElementById("viewListBtn").style.background = mode === "list" ? "var(--c4)" : "transparent";
+  document.getElementById("viewListBtn").style.color      = mode === "list" ? "white" : "var(--text)";
+  document.getElementById("viewCalBtn").style.background  = mode === "cal"  ? "var(--c4)" : "transparent";
+  document.getElementById("viewCalBtn").style.color       = mode === "cal"  ? "white" : "var(--text)";
+  if (mode === "cal") renderCal();
+}
+
+/* ============================================================
+  CALENDAR
+============================================================ */
+var calYear, calMonth, calSelectedDate;
+var THAI_DOW = ["อา","จ","อ","พ","พฤ","ศ","ส"];
+var THAI_MONTH_FULL = ["","มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน",
+                       "กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+
+function initCal() {
+  var n = new Date();
+  calYear = n.getFullYear();
+  calMonth = n.getMonth() + 1;
+}
+
+function calPrevMonth() {
+  calMonth--;
+  if (calMonth < 1) { calMonth = 12; calYear--; }
+  renderCal();
+}
+
+function calNextMonth() {
+  calMonth++;
+  if (calMonth > 12) { calMonth = 1; calYear++; }
+  renderCal();
+}
+
+function renderCal() {
+  if (!calYear) initCal();
+  document.getElementById("calMonthLabel").textContent =
+    THAI_MONTH_FULL[calMonth] + " " + (calYear + 543);
+
+  var today = todayISO();
+  /* Build map: date → [assignments] */
+  var byDate = {};
+  assignments.forEach(function(a) {
+    if (a.due) {
+      if (!byDate[a.due]) byDate[a.due] = [];
+      byDate[a.due].push(a);
+    }
+  });
+
+  /* Days grid */
+  var firstDay = new Date(calYear, calMonth - 1, 1).getDay(); /* 0=Sun */
+  var daysInMonth = new Date(calYear, calMonth, 0).getDate();
+  var daysInPrev  = new Date(calYear, calMonth - 1, 0).getDate();
+
+  var html = '<div class="cal-grid">';
+  /* Day-of-week headers */
+  THAI_DOW.forEach(function(d) {
+    html += '<div class="cal-dow">' + d + '</div>';
+  });
+
+  /* Prev month tail */
+  for (var i = firstDay - 1; i >= 0; i--) {
+    var d = daysInPrev - i;
+    html += '<div class="cal-cell other-month"><div class="cal-day">' + d + '</div></div>';
+  }
+
+  /* This month */
+  for (var day = 1; day <= daysInMonth; day++) {
+    var iso = calYear + "-" + String(calMonth).padStart(2,"0") + "-" + String(day).padStart(2,"0");
+    var isToday    = iso === today;
+    var isSelected = iso === calSelectedDate;
+    var cls = "cal-cell" + (isToday ? " today" : "") + (isSelected ? " selected" : "");
+    var dots = "";
+    if (byDate[iso]) {
+      dots = '<div class="cal-dots">';
+      byDate[iso].slice(0, 4).forEach(function(a) {
+        var subj = getSubject(a.subjectId);
+        var dotColor = a.done ? "#bbb" : (iso < today ? "var(--red)" : subj.color);
+        dots += '<div class="cal-dot" style="background:' + dotColor + ';"></div>';
+      });
+      dots += '</div>';
+    }
+    html += '<div class="' + cls + '" onclick="calSelectDay(\'' + iso + '\')">' +
+      '<div class="cal-day">' + day + '</div>' + dots + '</div>';
+  }
+
+  /* Next month fill */
+  var total = firstDay + daysInMonth;
+  var remaining = total % 7 === 0 ? 0 : 7 - (total % 7);
+  for (var nd = 1; nd <= remaining; nd++) {
+    html += '<div class="cal-cell other-month"><div class="cal-day">' + nd + '</div></div>';
+  }
+  html += '</div>';
+  document.getElementById("calGrid").innerHTML = html;
+
+  if (calSelectedDate) renderCalDayDetail(calSelectedDate);
+}
+
+function calSelectDay(iso) {
+  calSelectedDate = iso;
+  renderCal();
+}
+
+function renderCalDayDetail(iso) {
+  var today = todayISO();
+  var items = assignments.filter(function(a){ return a.due === iso; });
+  if (items.length === 0) {
+    document.getElementById("calDayDetail").innerHTML =
+      '<div style="text-align:center;color:#ccc;font-size:.85rem;padding:10px 0;">ไม่มีงานในวันนี้</div>';
+    return;
+  }
+  var p = iso.split("-");
+  var label = p[2] + "/" + p[1] + "/" + (parseInt(p[0]) + 543);
+  var html = '<div style="font-size:.82rem;font-weight:600;color:var(--c4);margin-bottom:8px;">📅 ' + label + '</div>';
+  items.forEach(function(a) {
+    var subj   = getSubject(a.subjectId);
+    var status = assignStatus(a);
+    var cls    = "cal-day-detail-card" + (status === "overdue" ? " overdue" : status === "done" ? " done" : "");
+    html += '<div class="' + cls + '" style="border-left-color:' + subj.color + ';">' +
+      '<div style="font-size:.72rem;font-weight:600;color:#888;margin-bottom:3px;">' + escapeHtml(subj.name) + '</div>' +
+      '<div style="font-size:.88rem;font-weight:600;">' + (a.done ? "✅ " : "") + escapeHtml(a.title) + '</div>' +
+      (a.detail ? '<div style="font-size:.76rem;color:#aaa;margin-top:2px;">' + escapeHtml(a.detail) + '</div>' : '') +
+      (subj.classroom || subj.drive ? '<div class="subj-link-row">' +
+        (subj.classroom ? '<a href="' + escapeHtml(subj.classroom) + '" target="_blank" class="subj-link-btn">🎓 Classroom</a>' : '') +
+        (subj.drive     ? '<a href="' + escapeHtml(subj.drive)     + '" target="_blank" class="subj-link-btn">📁 Drive</a>'     : '') +
+      '</div>' : '') +
+    '</div>';
+  });
+  document.getElementById("calDayDetail").innerHTML = html;
+}
+
+/* ============================================================
+  TOGGLE DONE
+============================================================ */
+function toggleAssignDone(id) {
+  var a = assignments.find(function(x){ return x.id === id; });
+  if (!a) return;
+  a.done = !a.done;
+  saveAssignData();
+  renderAssignSummary();
+  renderSubjectTabs();
+  renderAssignList();
+  showStatus(a.done ? "✅ ทำเครื่องหมายส่งงานแล้ว" : "↩️ ยกเลิกการส่ง");
+}
+
+/* ============================================================
+  ADD / EDIT ASSIGNMENT
+============================================================ */
+function openAddAssign() {
+  editingAssignId = null;
+  document.getElementById("assignModalTitle").textContent = "📌 เพิ่มงานใหม่";
+  document.getElementById("assignTitleInput").value  = "";
+  document.getElementById("assignDetailInput").value = "";
+  document.getElementById("assignDueInput").value    = "";
+  populateSubjectSelect();
+  document.getElementById("assignModal").style.display = "flex";
+}
+
+function openEditAssign(id) {
+  var a = assignments.find(function(x){ return x.id === id; });
+  if (!a) return;
+  editingAssignId = id;
+  document.getElementById("assignModalTitle").textContent = "✏️ แก้ไขงาน";
+  document.getElementById("assignTitleInput").value  = a.title;
+  document.getElementById("assignDetailInput").value = a.detail || "";
+  document.getElementById("assignDueInput").value    = a.due || "";
+  populateSubjectSelect(a.subjectId);
+  document.getElementById("assignModal").style.display = "flex";
+}
+
+function populateSubjectSelect(selectedId) {
+  var sel = document.getElementById("assignSubjectInput");
+  sel.innerHTML = subjects.map(function(s) {
+    return '<option value="' + s.id + '"' + (s.id === selectedId ? " selected" : "") + '>' +
+           escapeHtml(s.code) + ' - ' + escapeHtml(s.name) + '</option>';
+  }).join("");
+}
+
+function saveAssign() {
+  var title = document.getElementById("assignTitleInput").value.trim();
+  if (!title) { showStatus("⚠️ กรุณากรอกชื่องาน"); return; }
+  var subjectId = document.getElementById("assignSubjectInput").value;
+  var detail    = document.getElementById("assignDetailInput").value.trim();
+  var due       = document.getElementById("assignDueInput").value;
+
+  if (editingAssignId) {
+    var a = assignments.find(function(x){ return x.id === editingAssignId; });
+    if (a) { a.title = title; a.subjectId = subjectId; a.detail = detail; a.due = due; }
+  } else {
+    assignments.push({
+      id: "a" + Date.now(),
+      subjectId: subjectId,
+      title: title,
+      detail: detail,
+      due: due,
+      done: false,
+      createdAt: todayISO()
+    });
+  }
+  saveAssignData();
+  closeAssignModal();
+  renderAssignPage();
+  showStatus(editingAssignId ? "✅ แก้ไขงานแล้ว" : "✅ เพิ่มงานแล้ว");
+}
+
+function deleteAssign(id) {
+  if (!confirm("ลบงานนี้?")) return;
+  assignments = assignments.filter(function(a){ return a.id !== id; });
+  saveAssignData();
+  renderAssignPage();
+  showStatus("🗑️ ลบงานแล้ว");
+}
+
+function closeAssignModal() {
+  document.getElementById("assignModal").style.display = "none";
+  editingAssignId = null;
+}
+
+/* ============================================================
+  SUBJECT MANAGEMENT (in settings)
+============================================================ */
+function renderSubjectSetting() {
+  loadAssignData();
+  var html = "";
+  subjects.forEach(function(s) {
+    var count = assignments.filter(function(a){ return a.subjectId === s.id; }).length;
+    html += '<div class="assign-setting-item">' +
+      '<div class="asi-dot" style="background:' + s.color + ';"></div>' +
+      '<div class="asi-info">' +
+        '<div class="asi-name">' + escapeHtml(s.code) + ' ' + escapeHtml(s.name) + '</div>' +
+        '<div class="asi-teacher">' + escapeHtml(s.teacher) + ' · ' + count + ' งาน</div>' +
+      '</div>' +
+      '<button class="assign-setting-edit" onclick="openEditSubject(\'' + s.id + '\')">✏️ แก้ไข</button>' +
+      (count === 0 ? '<button class="assign-del-btn" style="margin-left:4px;" onclick="deleteSubject(\'' + s.id + '\')">🗑️</button>' : '') +
+    '</div>';
+  });
+  document.getElementById("subjectSettingList").innerHTML = html || '<p style="color:#bbb;font-size:.85rem;padding:10px 0;">ยังไม่มีวิชา</p>';
+}
+
+function openAddSubject() {
+  editingSubjId = null;
+  document.getElementById("subjEditId").value        = "";
+  document.getElementById("subjEditCode").value      = "";
+  document.getElementById("subjEditName").value      = "";
+  document.getElementById("subjEditTeacher").value   = "";
+  document.getElementById("subjEditClassroom").value = "";
+  document.getElementById("subjEditDrive").value     = "";
+  renderColorPicker(SUBJECT_COLORS[0]);
+  document.getElementById("subjModal").style.display = "flex";
+}
+
+function openEditSubject(id) {
+  var s = subjects.find(function(x){ return x.id === id; });
+  if (!s) return;
+  editingSubjId = id;
+  document.getElementById("subjEditId").value        = id;
+  document.getElementById("subjEditCode").value      = s.code;
+  document.getElementById("subjEditName").value      = s.name;
+  document.getElementById("subjEditTeacher").value   = s.teacher;
+  document.getElementById("subjEditClassroom").value = s.classroom || "";
+  document.getElementById("subjEditDrive").value     = s.drive || "";
+  renderColorPicker(s.color);
+  document.getElementById("subjModal").style.display = "flex";
+}
+
+function renderColorPicker(selected) {
+  var html = SUBJECT_COLORS.map(function(c) {
+    return '<div class="assign-color-swatch' + (c === selected ? " selected" : "") +
+           '" style="background:' + c + ';" onclick="selectColor(\'' + c + '\')"></div>';
+  }).join("");
+  document.getElementById("subjColorPicker").innerHTML = html;
+}
+
+function selectColor(c) {
+  renderColorPicker(c);
+}
+
+function saveSubject() {
+  var code      = document.getElementById("subjEditCode").value.trim();
+  var name      = document.getElementById("subjEditName").value.trim();
+  var teacher   = document.getElementById("subjEditTeacher").value.trim();
+  var classroom = document.getElementById("subjEditClassroom").value.trim();
+  var drive     = document.getElementById("subjEditDrive").value.trim();
+  if (!name) { showStatus("⚠️ กรุณากรอกชื่อวิชา"); return; }
+  var selSwatch = document.querySelector("#subjColorPicker .assign-color-swatch.selected");
+  var color = selSwatch ? selSwatch.style.backgroundColor : SUBJECT_COLORS[0];
+  if (color.startsWith("rgb")) {
+    var m = color.match(/\d+/g);
+    color = "#" + m.map(function(x){ return parseInt(x).toString(16).padStart(2,"0"); }).join("");
+  }
+
+  if (editingSubjId) {
+    var s = subjects.find(function(x){ return x.id === editingSubjId; });
+    if (s) { s.code = code; s.name = name; s.teacher = teacher; s.color = color; s.classroom = classroom; s.drive = drive; }
+  } else {
+    subjects.push({ id: "s" + Date.now(), code: code, name: name, teacher: teacher, color: color, classroom: classroom, drive: drive });
+  }
+  saveAssignData();
+  closeSubjModal();
+  renderSubjectSetting();
+  showStatus(editingSubjId ? "✅ แก้ไขวิชาแล้ว" : "✅ เพิ่มวิชาแล้ว");
+}
+
+function deleteSubject(id) {
+  if (!confirm("ลบวิชานี้?")) return;
+  subjects = subjects.filter(function(s){ return s.id !== id; });
+  saveAssignData();
+  renderSubjectSetting();
+  showStatus("🗑️ ลบวิชาแล้ว");
+}
+
+function closeSubjModal() {
+  document.getElementById("subjModal").style.display = "none";
+  editingSubjId = null;
+}
+
+/* ปิด modal เมื่อคลิก overlay ด้านนอก */
+document.getElementById("assignModal").addEventListener("click", function(e) {
+  if (e.target === this) closeAssignModal();
+});
+document.getElementById("subjModal").addEventListener("click", function(e) {
+  if (e.target === this) closeSubjModal();
+});
+
+/* โหลดข้อมูล assignment ตั้งแต่เริ่ม */
+loadAssignData();
+
+/* ============================================================
+  STARTUP: รันตอนโหลดหน้า
+  - เปิด IndexedDB ให้พร้อม
+============================================================ */
+openDB().then(function() {
+  console.log("✅ IndexedDB พร้อมใช้งาน (รองรับข้อมูล 5+ เดือน)");
+}).catch(function(e) {
+  console.error("❌ IndexedDB error:", e);
+  showStatus("⚠️ browser ไม่รองรับการจัดเก็บข้อมูล กรุณาใช้ Chrome/Safari ล่าสุด");
+});
+</script>
+</body>
+</html>
