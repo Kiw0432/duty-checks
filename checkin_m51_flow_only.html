@@ -1,0 +1,569 @@
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Mitr',sans-serif;}
+:root{--c1:#FAF7F3;--c2:#F0E4D3;--c3:#DCC5B2;--c4:#D9A299;--text:#5c4d45;--green:#89b89a;--red:#e58d8d;}
+body{background:var(--c1);color:var(--text);}
+.container{max-width:1100px;margin:auto;padding:20px;padding-bottom:120px;}
+.header{background:linear-gradient(135deg,var(--c3),var(--c4));padding:24px 28px;border-radius:30px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:18px;color:white;}
+.logo h1{font-size:1.8rem;}
+.top-actions{display:flex;gap:10px;}
+.top-actions button{border:none;padding:12px 18px;border-radius:16px;cursor:pointer;font-size:.95rem;font-weight:600;}
+.setting-btn{background:#b89c82;color:white;}.logout-btn{background:#de7f7f;color:white;}
+.banner-slider{width:100%;height:340px;border-radius:30px;overflow:hidden;position:relative;margin-bottom:24px;}
+.slides{width:100%;height:100%;position:relative;}.slide{position:absolute;width:100%;height:100%;opacity:0;transition:1s;}.slide.active{opacity:1;}
+.slide img{width:100%;height:100%;object-fit:cover;transition:transform 8s ease;}.slide.active img{transform:scale(1.05);}
+.dots{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:5;}
+.dot{width:11px;height:11px;border-radius:50%;background:rgba(255,255,255,.5);cursor:pointer;}.dot.active{background:white;}
+.card{background:white;border-radius:24px;padding:20px;margin-bottom:16px;box-shadow:0 4px 16px rgba(0,0,0,.05);}
+.login-card{max-width:420px;margin:40px auto;padding:30px;border-radius:34px;}
+input[type=text],input[type=password],input[type=date]{width:100%;border:none;background:var(--c1);padding:13px;border-radius:14px;outline:none;margin-bottom:12px;font-size:1rem;font-family:'Mitr',sans-serif;}
+button{border:none;border-radius:14px;padding:13px;cursor:pointer;font-size:1rem;transition:.2s;font-family:'Mitr',sans-serif;}
+button:hover{transform:translateY(-2px);}
+.btn-main{background:var(--c4);color:white;}.btn-soft{background:var(--c2);color:var(--text);}.btn-danger{background:var(--red);color:white;}
+.dashboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;}
+.dash-card{background:var(--c1);padding:16px;border-radius:18px;text-align:center;}
+.dash-card h1{margin-top:6px;color:var(--c4);font-size:2rem;}
+.percent-badge{display:inline-block;background:#f0e4d3;color:#b87a6a;border-radius:8px;padding:2px 8px;font-size:.8rem;margin-top:4px;font-weight:600;}
+.bottom-nav{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:white;padding:12px;border-radius:26px;display:flex;gap:8px;box-shadow:0 8px 25px rgba(0,0,0,.08);z-index:999;}
+.bottom-nav button{background:var(--c4);color:white;min-width:90px;padding:12px 8px;font-size:.85rem;}
+.modal-wrap{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.35);display:none;justify-content:center;align-items:center;z-index:99999;}
+.modal-box{background:white;width:95%;max-width:500px;padding:28px;border-radius:30px;max-height:90vh;overflow:auto;}
+.setting-title{font-size:1rem;font-weight:600;margin-bottom:10px;color:var(--c4);}
+.upload-box{background:var(--c1);padding:12px;border-radius:16px;margin-bottom:12px;}
+.hidden{display:none!important;}
+.loading-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,.8);display:flex;justify-content:center;align-items:center;z-index:999999;}
+.loading-box{background:white;padding:28px 36px;border-radius:26px;text-align:center;}
+.loader{width:50px;height:50px;border:5px solid #eee;border-top:5px solid var(--c4);border-radius:50%;margin:auto;margin-bottom:12px;animation:spin 1s linear infinite;}
+@keyframes spin{100%{transform:rotate(360deg);}}
+.table-wrapper{overflow:auto;border-radius:16px;}
+table{width:100%;border-collapse:collapse;min-width:560px;}
+thead{background:var(--c2);}
+th,td{padding:12px 10px;text-align:center;border-bottom:1px solid #eee;font-size:.9rem;}
+
+/* FLOW */
+.flow-stepper{display:flex;align-items:flex-start;margin-bottom:22px;}
+.flow-step{display:flex;flex-direction:column;align-items:center;flex:1;}
+.step-circle{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.95rem;font-weight:600;border:2px solid var(--c3);background:white;color:var(--c3);transition:.3s;flex-shrink:0;}
+.step-circle.active{background:var(--c4);border-color:var(--c4);color:white;}
+.step-circle.done{background:var(--green);border-color:var(--green);color:white;}
+.step-label{font-size:.72rem;margin-top:4px;color:#bbb;text-align:center;line-height:1.3;}
+.step-label.active{color:var(--c4);font-weight:600;}
+.step-label.done{color:var(--green);}
+.step-line{flex:1;height:2px;background:var(--c2);margin-top:17px;}
+.step-line.done{background:var(--green);}
+
+/* Student grid */
+.student-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:10px 0 16px;}
+.student-card{background:var(--c1);border-radius:14px;padding:12px 8px;text-align:center;cursor:pointer;border:2px solid transparent;transition:.15s;user-select:none;}
+.student-card:hover{border-color:var(--c3);}
+.student-card.selected{border-color:var(--c4);background:#fff5f4;}
+.student-card .snum{font-size:.75rem;color:#bbb;}
+.student-card .sname{font-size:.85rem;font-weight:600;margin-top:2px;line-height:1.3;}
+.sel-count{font-size:.85rem;color:var(--c4);font-weight:600;margin-bottom:8px;}
+
+/* Type grid */
+.type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0 16px;}
+.type-card{background:var(--c1);border-radius:18px;padding:20px 8px;text-align:center;cursor:pointer;border:2px solid transparent;transition:.15s;}
+.type-card:hover{border-color:var(--c3);}
+.type-card.sel-work{border-color:#89b89a!important;background:#f0f9f3!important;}
+.type-card.sel-leave{border-color:#e58d8d!important;background:#fff3f3!important;}
+.type-card.sel-late{border-color:#e5c08d!important;background:#fffaf0!important;}
+.type-card .ti{font-size:1.8rem;}
+.type-card .tn{font-size:.95rem;font-weight:600;margin-top:6px;}
+
+/* Confirm */
+.confirm-box{background:var(--c1);border-radius:16px;padding:16px;margin-bottom:14px;}
+.confirm-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #eee;font-size:.9rem;}
+.confirm-row:last-child{border-bottom:none;}
+.confirm-list{max-height:140px;overflow-y:auto;background:white;border-radius:10px;padding:8px;margin-top:6px;}
+.confirm-list-item{font-size:.85rem;padding:4px 0;border-bottom:1px solid #f5f5f5;}
+.confirm-list-item:last-child{border-bottom:none;}
+
+.flow-nav{display:flex;gap:10px;margin-top:4px;}
+.flow-nav button{flex:1;}
+
+@media(max-width:768px){
+.container{padding:12px;padding-bottom:130px;}
+.logo h1{font-size:1.3rem;}
+.banner-slider{height:200px;border-radius:22px;}
+.bottom-nav{width:97%;padding:8px;gap:5px;}
+.bottom-nav button{flex:1;padding:11px 4px;font-size:.78rem;min-width:auto;border-radius:12px;}
+.top-actions button{padding:10px 12px;font-size:.88rem;}
+.student-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));}
+.type-grid{gap:7px;}.type-card{padding:16px 6px;}.type-card .ti{font-size:1.4rem;}
+th,td{padding:9px 6px;font-size:.82rem;}
+}
+</style>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Mitr:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="container">
+  <div class="header">
+    <div class="logo"><h1>ระบบเช็คชื่อเวร M5/1</h1></div>
+    <div class="top-actions hidden" id="topActions">
+      <button class="setting-btn" onclick="openSetting()">⚙️ ตั้งค่า</button>
+      <button class="logout-btn" onclick="logout()">🚪 ออกจากระบบ</button>
+    </div>
+  </div>
+
+  <!-- LOGIN -->
+  <div class="card login-card" id="loginPage">
+    <h2 style="margin-bottom:18px;font-size:1.9rem;">🔐 เข้าสู่ระบบ</h2>
+    <input type="text" id="username" placeholder="ชื่อผู้ใช้">
+    <input type="password" id="password" placeholder="รหัสผ่าน">
+    <button class="btn-main" style="width:100%;margin-bottom:10px;" onclick="loginTeacher()">👩‍🏫 เข้าสู่ระบบครู</button>
+    <button class="btn-soft" style="width:100%;" onclick="loginStudent()">👨‍🎓 เข้าชมแบบนักเรียน</button>
+  </div>
+
+  <!-- HOME -->
+  <div id="homePage" class="hidden">
+    <div class="banner-slider">
+      <div class="slides" id="slides"></div>
+      <div class="dots" id="dots"></div>
+    </div>
+  </div>
+
+  <!-- FLOW CHECK PAGE -->
+  <div id="checkPage" class="hidden">
+    <div class="card">
+      <!-- Stepper -->
+      <div class="flow-stepper">
+        <div class="flow-step"><div class="step-circle active" id="sc1">1</div><div class="step-label active" id="sl1">เลือกนักเรียน</div></div>
+        <div class="step-line" id="line1"></div>
+        <div class="flow-step"><div class="step-circle" id="sc2">2</div><div class="step-label" id="sl2">เลือกประเภท</div></div>
+        <div class="step-line" id="line2"></div>
+        <div class="flow-step"><div class="step-circle" id="sc3">3</div><div class="step-label" id="sl3">บันทึก</div></div>
+      </div>
+
+      <!-- Step 1: เลือกนักเรียน (หลายคน) -->
+      <div id="flowStep1">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-weight:600;font-size:1rem;">เลือกนักเรียน</span>
+          <button class="btn-soft" style="padding:6px 14px;font-size:.8rem;" onclick="toggleSelectAll()">เลือก/ยกเลิกทั้งหมด</button>
+        </div>
+        <input type="text" id="flowSearch" placeholder="ค้นหาชื่อ..." onkeyup="renderFlowStudents()" style="margin-bottom:8px;">
+        <div class="sel-count" id="selCount">เลือกแล้ว 0 คน</div>
+        <div class="student-grid" id="flowStudentGrid"></div>
+        <div class="flow-nav">
+          <button class="btn-main" id="flowBtn1" onclick="flowNext(2)" disabled style="opacity:.5;">ถัดไป →</button>
+        </div>
+      </div>
+
+      <!-- Step 2: ประเภท -->
+      <div id="flowStep2" class="hidden">
+        <div style="font-weight:600;font-size:1rem;margin-bottom:4px;">เลือกประเภท</div>
+        <div style="font-size:.85rem;color:#bbb;margin-bottom:12px;" id="step2sub"></div>
+        <div class="type-grid">
+          <div class="type-card" id="tc-work" onclick="selectType('ทำเวร',this)">
+            <div class="ti">🧹</div><div class="tn">ทำเวร</div>
+          </div>
+          <div class="type-card" id="tc-leave" onclick="selectType('ลา',this)">
+            <div class="ti">📋</div><div class="tn">ลา</div>
+          </div>
+          <div class="type-card" id="tc-late" onclick="selectType('มาสาย',this)">
+            <div class="ti">⏰</div><div class="tn">มาสาย</div>
+          </div>
+        </div>
+        <div class="flow-nav">
+          <button class="btn-soft" onclick="flowNext(1)">← ย้อนกลับ</button>
+          <button class="btn-main" id="flowBtn2" onclick="flowNext(3)" disabled style="opacity:.5;">ถัดไป →</button>
+        </div>
+      </div>
+
+      <!-- Step 3: ยืนยัน -->
+      <div id="flowStep3" class="hidden">
+        <div style="font-weight:600;font-size:1rem;margin-bottom:12px;">ยืนยันการบันทึก</div>
+        <div class="confirm-box">
+          <div class="confirm-row"><span style="color:#bbb;">วันที่</span><span id="cfDate"></span></div>
+          <div class="confirm-row"><span style="color:#bbb;">ประเภท</span><span id="cfType" style="font-weight:600;color:var(--c4);font-size:1.05rem;"></span></div>
+          <div class="confirm-row" style="flex-direction:column;align-items:flex-start;">
+            <span style="color:#bbb;margin-bottom:4px;">นักเรียนที่เลือก (<span id="cfCount">0</span> คน)</span>
+            <div class="confirm-list" id="cfList"></div>
+          </div>
+        </div>
+        <div class="flow-nav">
+          <button class="btn-soft" onclick="flowNext(2)">← ย้อนกลับ</button>
+          <button class="btn-main" onclick="submitFlow()">💾 บันทึกลง Google Sheet</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashboardPage" class="hidden">
+    <div class="card">
+      <div class="dashboard">
+        <div class="dash-card">ทั้งหมด<h1 id="allCount">19</h1></div>
+        <div class="dash-card">มาเรียน<h1 id="checkedCount">0</h1><div class="percent-badge" id="checkedPct">0%</div></div>
+        <div class="dash-card">ทำเวร<h1 id="doneCount">0</h1><div class="percent-badge" id="donePct">0%</div></div>
+        <div class="dash-card">ขาด<h1 id="absentCount">0</h1><div class="percent-badge" id="absentPct">0%</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2 style="margin-bottom:12px;">📈 สรุปรายเดือน</h2>
+      <canvas id="monthlyChart"></canvas>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div id="historyPage" class="hidden">
+    <div class="card">
+      <div style="font-size:1.1rem;font-weight:600;margin-bottom:14px;" id="todayDate"></div>
+      <input type="date" id="historyDate" onchange="filterHistoryDate()">
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>วัน/เดือน/ปี</th><th>เลขที่</th><th>ชื่อ</th><th>ประเภท</th></tr></thead>
+          <tbody id="historyTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav hidden" id="bottomNav">
+  <button onclick="openPage('checkPage');initFlow()">📝 เช็คชื่อ</button>
+  <button onclick="openPage('dashboardPage')">📊 Dashboard</button>
+  <button onclick="openPage('historyPage')">🕒 ย้อนหลัง</button>
+  <button onclick="goHome()">🏠 Home</button>
+</div>
+
+<!-- SETTING -->
+<div class="modal-wrap" id="settingModal">
+  <div class="modal-box">
+    <h2 style="margin-bottom:18px;">⚙️ ตั้งค่า</h2>
+    <div style="margin-bottom:18px;">
+      <div class="setting-title">🖼️ จัดการรูปสไลด์</div>
+      <div class="upload-box"><p style="margin-bottom:8px;font-size:.9rem;">สไลด์ที่ 1</p><input type="file" accept="image/*" onchange="changeSlide(event,0)"></div>
+      <div class="upload-box"><p style="margin-bottom:8px;font-size:.9rem;">สไลด์ที่ 2</p><input type="file" accept="image/*" onchange="changeSlide(event,1)"></div>
+      <div class="upload-box"><p style="margin-bottom:8px;font-size:.9rem;">สไลด์ที่ 3</p><input type="file" accept="image/*" onchange="changeSlide(event,2)"></div>
+    </div>
+    <div style="margin-bottom:18px;">
+      <div class="setting-title">🌄 พื้นหลัง</div>
+      <div class="upload-box"><input type="file" accept="image/*" onchange="changeBackground(event)"></div>
+      <div class="upload-box"><button class="btn-danger" style="width:100%;" onclick="removeBackground()">🗑️ ลบรูปพื้นหลัง</button></div>
+    </div>
+    <div style="margin-bottom:18px;">
+      <div class="setting-title">📂 ข้อมูล</div>
+      <div class="upload-box"><button class="btn-danger" style="width:100%;" onclick="clearHistory()">🗑️ ลบประวัติทั้งหมด</button></div>
+    </div>
+    <button class="btn-main" onclick="closeSetting()" style="width:100%;margin-bottom:8px;">ปิด</button>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div class="loading-overlay hidden" id="loadingOverlay">
+  <div class="loading-box"><div class="loader"></div><p id="loadingMsg">กำลังบันทึกข้อมูล...</p></div>
+</div>
+
+<script>
+var STUDENTS=[
+{no:1,id:"07401",name:"นางสาวอภัสรา สมฤทธิ์"},
+{no:2,id:"07565",name:"นางสาวพลอยจัน บัวผัน"},
+{no:3,id:"07572",name:"นางสาวชุติกาญจน์ แซ่โง้ว"},
+{no:4,id:"07577",name:"นางสาวรุ่งทิวา มองมณี"},
+{no:5,id:"07581",name:"นางสาวศศิพิมพ์ ประกอบสุข"},
+{no:6,id:"07582",name:"นางสาวสโรชา จันทร์น่วม"},
+{no:7,id:"07596",name:"นายปิยะ สีสุด"},
+{no:8,id:"07598",name:"นายภควัฒน์ ชารีพันธ์"},
+{no:9,id:"07628",name:"นายสุรชาติ นิลวรรณา"},
+{no:10,id:"07632",name:"นางสาวณัฐธิชา โควินทะสุด"},
+{no:11,id:"07640",name:"นางสาวภัทรกันย์ กองศรี"},
+{no:12,id:"07641",name:"นางสาวสรัลรัตน์ แซ่เจ็ง"},
+{no:13,id:"07644",name:"นางสาวสุนิษา อดใจ"},
+{no:14,id:"07683",name:"นายธนโชติ ทิพยางกูร"},
+{no:15,id:"07919",name:"นายณัฐกิตต์ เหลืองอ่อน"},
+{no:16,id:"07921",name:"นายสุทธิพงษ์ แซ่ลี"},
+{no:17,id:"07939",name:"นางสาวกัญญาภรณ์ หนูเหมือน"},
+{no:18,id:"08305",name:"นางสาวชลธิชา แก้วคำพันธ์"},
+{no:20,id:"08307",name:"นางสาวนริญา ดีมา"}
+];
+
+var SHEET_URL="https://script.google.com/macros/s/AKfycbymN8NlsKnK6gqpD4AAAul5hz_chhKOB788exetLJMXop6hzQqgnCcaCXFcc0u-9KgeSQ/exec";
+var isTeacher=false;
+var monthlyChart=null;
+var selectedIds=[];
+var selectedType=null;
+
+var slideImages=JSON.parse(localStorage.getItem("slideImages"))||[
+"https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=1200&auto=format&fit=crop",
+"https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1200&auto=format&fit=crop",
+"https://images.unsplash.com/photo-1523240795612-9a054b0db644?q=80&w=1200&auto=format&fit=crop"
+];
+
+function getThaiDate(){
+var n=new Date();
+return String(n.getDate()).padStart(2,'0')+"/"+String(n.getMonth()+1).padStart(2,'0')+"/"+(n.getFullYear()+543);
+}
+
+document.getElementById("todayDate").innerHTML=getThaiDate();
+
+function loginTeacher(){
+var u=document.getElementById("username").value;
+var p=document.getElementById("password").value;
+if(u==="teacher"&&p==="1234"){isTeacher=true;startSystem();}
+else alert("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+}
+function loginStudent(){isTeacher=false;startSystem();}
+function logout(){location.reload();}
+
+function startSystem(){
+document.getElementById("loginPage").classList.add("hidden");
+document.getElementById("homePage").classList.remove("hidden");
+document.getElementById("bottomNav").classList.remove("hidden");
+if(isTeacher)document.getElementById("topActions").classList.remove("hidden");
+renderHistory();renderChart();updateDashboard();
+showStatus("เข้าสู่ระบบสำเร็จ ✨");
+}
+
+function openPage(id){
+["homePage","checkPage","dashboardPage","historyPage"].forEach(function(p){document.getElementById(p).classList.add("hidden");});
+document.getElementById(id).classList.remove("hidden");
+if(id==="dashboardPage"){updateDashboard();renderChart();}
+}
+function goHome(){
+["checkPage","dashboardPage","historyPage"].forEach(function(p){document.getElementById(p).classList.add("hidden");});
+document.getElementById("homePage").classList.remove("hidden");
+}
+
+/* SLIDES */
+function renderSlides(){
+var sc=document.getElementById("slides"),dc=document.getElementById("dots");
+sc.innerHTML="";dc.innerHTML="";
+slideImages.forEach(function(img,i){
+sc.innerHTML+='<div class="slide'+(i===0?' active':'')+'"><img src="'+img+'"></div>';
+dc.innerHTML+='<div class="dot'+(i===0?' active':'')+'" onclick="showSlide('+i+')"></div>';
+});
+}
+renderSlides();
+var curSlide=0;
+function showSlide(i){
+document.querySelectorAll(".slide").forEach(function(s,idx){s.classList.toggle("active",idx===i);});
+document.querySelectorAll(".dot").forEach(function(d,idx){d.classList.toggle("active",idx===i);});
+curSlide=i;
+}
+setInterval(function(){showSlide((curSlide+1)%slideImages.length);},4000);
+function changeSlide(e,i){
+var f=e.target.files[0];if(!f)return;
+var r=new FileReader();r.onload=function(ev){slideImages[i]=ev.target.result;localStorage.setItem("slideImages",JSON.stringify(slideImages));renderSlides();showStatus("เปลี่ยนรูปสไลด์แล้ว ✨");};r.readAsDataURL(f);
+}
+function changeBackground(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(ev){localStorage.setItem("customBackground",ev.target.result);showStatus("เปลี่ยนพื้นหลังแล้ว ✨");};r.readAsDataURL(f);}
+function removeBackground(){localStorage.removeItem("customBackground");showStatus("ลบพื้นหลังแล้ว");}
+
+/* DASHBOARD */
+function updateDashboard(){
+var log=JSON.parse(localStorage.getItem("flowLog"))||[];
+var today=getThaiDate();
+var todayLog=log.filter(function(r){return r.date===today;});
+var seenIds={};
+todayLog.forEach(function(r){seenIds[r.studentId]=r.action;});
+var checkedCount=Object.keys(seenIds).length;
+var doneCount=Object.values(seenIds).filter(function(a){return a==="ทำเวร";}).length;
+var total=STUDENTS.length;
+document.getElementById("allCount").innerHTML=total;
+document.getElementById("checkedCount").innerHTML=checkedCount;
+document.getElementById("doneCount").innerHTML=doneCount;
+document.getElementById("absentCount").innerHTML=total-checkedCount;
+document.getElementById("checkedPct").innerHTML=Math.round(checkedCount/total*100)+"%";
+document.getElementById("donePct").innerHTML=Math.round(doneCount/total*100)+"%";
+document.getElementById("absentPct").innerHTML=Math.round((total-checkedCount)/total*100)+"%";
+}
+
+/* HISTORY */
+function renderHistory(){
+var log=JSON.parse(localStorage.getItem("flowLog"))||[];
+var tbody=document.getElementById("historyTable");
+tbody.innerHTML="";
+if(!log.length){tbody.innerHTML='<tr><td colspan="4">ไม่มีข้อมูล</td></tr>';return;}
+log.slice().reverse().forEach(function(r){
+var icon=r.action==="ทำเวร"?"🧹":r.action==="ลา"?"📋":"⏰";
+tbody.innerHTML+='<tr><td>'+r.date+'</td><td>'+r.no+'</td><td>'+r.name+'</td><td>'+icon+' '+r.action+'</td></tr>';
+});
+}
+function filterHistoryDate(){
+var sel=document.getElementById("historyDate").value;
+var log=JSON.parse(localStorage.getItem("flowLog"))||[];
+var tbody=document.getElementById("historyTable");
+tbody.innerHTML="";
+log.forEach(function(r){
+var p=r.date.split("/");
+var d=(parseInt(p[2])-543)+"-"+p[1]+"-"+p[0];
+if(d===sel){
+var icon=r.action==="ทำเวร"?"🧹":r.action==="ลา"?"📋":"⏰";
+tbody.innerHTML+='<tr><td>'+r.date+'</td><td>'+r.no+'</td><td>'+r.name+'</td><td>'+icon+' '+r.action+'</td></tr>';
+}
+});
+if(!tbody.innerHTML)tbody.innerHTML='<tr><td colspan="4">ไม่มีข้อมูลในวันนี้</td></tr>';
+}
+function clearHistory(){
+if(!confirm("ลบประวัติทั้งหมด?"))return;
+localStorage.removeItem("flowLog");renderHistory();renderChart();updateDashboard();showStatus("ลบประวัติแล้ว");
+}
+
+/* CHART */
+function renderChart(){
+var log=JSON.parse(localStorage.getItem("flowLog"))||[];
+var md={};
+log.forEach(function(r){
+var p=r.date.split("/");var m=p[1]+"/"+p[2];
+if(!md[m])md[m]={work:0,leave:0,late:0};
+if(r.action==="ทำเวร")md[m].work++;
+else if(r.action==="ลา")md[m].leave++;
+else if(r.action==="มาสาย")md[m].late++;
+});
+var labels=Object.keys(md);
+if(!labels.length){labels=["ยังไม่มีข้อมูล"];}
+var wData=labels.map(function(l){return md[l]?md[l].work:0;});
+var lvData=labels.map(function(l){return md[l]?md[l].leave:0;});
+var ltData=labels.map(function(l){return md[l]?md[l].late:0;});
+var canvas=document.getElementById("monthlyChart");if(!canvas)return;
+var ctx=canvas.getContext("2d");
+if(monthlyChart)monthlyChart.destroy();
+monthlyChart=new Chart(ctx,{type:"bar",data:{labels:labels,datasets:[
+{label:"ทำเวร",data:wData,backgroundColor:"#89b89a"},
+{label:"ลา",data:lvData,backgroundColor:"#e58d8d"},
+{label:"มาสาย",data:ltData,backgroundColor:"#e5c08d"}
+]},options:{responsive:true}});
+}
+
+/* FLOW */
+function initFlow(){
+if(!isTeacher){
+document.getElementById("flowStep1").innerHTML='<div style="text-align:center;padding:40px 0;color:#bbb;font-size:1.1rem;">🔒 เฉพาะครูเท่านั้น<br><span style="font-size:.85rem;">กรุณาเข้าสู่ระบบด้วยบัญชีครู</span></div>';
+return;
+}
+selectedIds=[];selectedType=null;
+document.getElementById("flowSearch").value="";
+renderFlowStudents();
+flowShowStep(1);
+}
+
+function renderFlowStudents(){
+var kw=(document.getElementById("flowSearch")||{value:""}).value.toLowerCase();
+var grid=document.getElementById("flowStudentGrid");
+if(!grid)return;
+grid.innerHTML="";
+STUDENTS.forEach(function(s){
+if((s.name+s.id+s.no).toLowerCase().includes(kw)){
+var sel=selectedIds.indexOf(s.id)>-1;
+grid.innerHTML+='<div class="student-card'+(sel?" selected":"")+'" onclick="toggleStudent(\''+s.id+'\')">'
++'<div class="snum">เลขที่ '+s.no+'</div>'
++'<div class="sname">'+s.name+'</div>'
++(sel?'<div style="color:var(--c4);font-size:.75rem;margin-top:3px;">✓ เลือกแล้ว</div>':'')
++'</div>';
+}
+});
+var n=selectedIds.length;
+document.getElementById("selCount").textContent="เลือกแล้ว "+n+" คน";
+var btn=document.getElementById("flowBtn1");
+if(btn){btn.disabled=n===0;btn.style.opacity=n===0?"0.5":"1";}
+}
+
+function toggleStudent(id){
+var idx=selectedIds.indexOf(id);
+if(idx>-1)selectedIds.splice(idx,1);
+else selectedIds.push(id);
+renderFlowStudents();
+}
+
+function toggleSelectAll(){
+var kw=(document.getElementById("flowSearch")||{value:""}).value.toLowerCase();
+var visible=STUDENTS.filter(function(s){return (s.name+s.id+s.no).toLowerCase().includes(kw);});
+var allSel=visible.every(function(s){return selectedIds.indexOf(s.id)>-1;});
+if(allSel){visible.forEach(function(s){var i=selectedIds.indexOf(s.id);if(i>-1)selectedIds.splice(i,1);});}
+else{visible.forEach(function(s){if(selectedIds.indexOf(s.id)===-1)selectedIds.push(s.id);});}
+renderFlowStudents();
+}
+
+function selectType(type,el){
+selectedType=type;
+["tc-work","tc-leave","tc-late"].forEach(function(id){
+var c=document.getElementById(id);
+c.classList.remove("sel-work","sel-leave","sel-late");
+});
+var cls=type==="ทำเวร"?"sel-work":type==="ลา"?"sel-leave":"sel-late";
+el.classList.add(cls);
+var btn=document.getElementById("flowBtn2");
+btn.disabled=false;btn.style.opacity="1";
+}
+
+function flowShowStep(n){
+[1,2,3].forEach(function(i){
+document.getElementById("flowStep"+i).classList.toggle("hidden",i!==n);
+var sc=document.getElementById("sc"+i);
+var sl=document.getElementById("sl"+i);
+sc.classList.remove("active","done");sl.classList.remove("active","done");
+});
+[1,2].forEach(function(i){document.getElementById("line"+i).classList.remove("done");});
+for(var i=1;i<n;i++){
+document.getElementById("sc"+i).classList.add("done");
+document.getElementById("sl"+i).classList.add("done");
+document.getElementById("line"+i).classList.add("done");
+}
+document.getElementById("sc"+n).classList.add("active");
+document.getElementById("sl"+n).classList.add("active");
+if(n===2){
+var names=selectedIds.map(function(id){var s=STUDENTS.find(function(x){return x.id===id;});return s?s.name:"";});
+document.getElementById("step2sub").textContent="เลือก "+selectedIds.length+" คน: "+names.join(", ");
+}
+if(n===3){
+document.getElementById("cfDate").textContent=getThaiDate();
+var icon=selectedType==="ทำเวร"?"🧹":selectedType==="ลา"?"📋":"⏰";
+document.getElementById("cfType").textContent=icon+" "+selectedType;
+document.getElementById("cfCount").textContent=selectedIds.length;
+var list=document.getElementById("cfList");
+list.innerHTML="";
+selectedIds.forEach(function(id){
+var s=STUDENTS.find(function(x){return x.id===id;});
+if(s)list.innerHTML+='<div class="confirm-list-item">'+s.no+'. '+s.name+'</div>';
+});
+}
+}
+
+function flowNext(step){
+if(step===2&&selectedIds.length===0){showStatus("กรุณาเลือกนักเรียนอย่างน้อย 1 คน");return;}
+if(step===3&&!selectedType){showStatus("กรุณาเลือกประเภท");return;}
+flowShowStep(step);
+}
+
+function submitFlow(){
+if(!isTeacher){showStatus("เฉพาะครูเท่านั้น");return;}
+if(!selectedIds.length||!selectedType){showStatus("ข้อมูลไม่ครบ");return;}
+showLoading("กำลังส่งข้อมูล...");
+var today=getThaiDate();
+var time=new Date().toLocaleTimeString("th-TH");
+var records=selectedIds.map(function(id){
+var s=STUDENTS.find(function(x){return x.id===id;});
+return {date:today,timestamp:time,no:s.no,studentId:s.id,name:s.name,action:selectedType};
+});
+var payload={type:"flow_batch",date:today,timestamp:time,action:selectedType,records:records};
+fetch(SHEET_URL+"?data="+encodeURIComponent(JSON.stringify(payload)))
+.then(function(r){return r.text();})
+.then(function(){
+var log=JSON.parse(localStorage.getItem("flowLog"))||[];
+records.forEach(function(r){log.push(r);});
+localStorage.setItem("flowLog",JSON.stringify(log));
+hideLoading();
+showStatus("บันทึกสำเร็จ ✅ "+selectedIds.length+" คน → "+selectedType);
+renderHistory();updateDashboard();renderChart();
+setTimeout(function(){initFlow();},1000);
+})
+.catch(function(err){console.log(err);hideLoading();showStatus("เกิดข้อผิดพลาด ❌");});
+}
+
+/* UTILS */
+function showLoading(msg){document.getElementById("loadingMsg").textContent=msg||"กำลังบันทึก...";document.getElementById("loadingOverlay").classList.remove("hidden");}
+function hideLoading(){document.getElementById("loadingOverlay").classList.add("hidden");}
+function openSetting(){document.getElementById("settingModal").style.display="flex";}
+function closeSetting(){document.getElementById("settingModal").style.display="none";}
+window.onclick=function(e){if(e.target===document.getElementById("settingModal"))closeSetting();};
+function showStatus(text){
+var o=document.getElementById("__sp");if(o)o.remove();
+var p=document.createElement("div");p.id="__sp";p.innerHTML=text;
+Object.assign(p.style,{position:"fixed",right:"18px",bottom:"90px",background:"#D9A299",color:"white",padding:"13px 18px",borderRadius:"16px",zIndex:"999999",fontFamily:"Mitr,sans-serif",boxShadow:"0 6px 18px rgba(0,0,0,.15)"});
+document.body.appendChild(p);
+setTimeout(function(){p.style.transition=".3s";p.style.opacity="0";setTimeout(function(){p.remove();},300);},2200);
+}
+</script>
